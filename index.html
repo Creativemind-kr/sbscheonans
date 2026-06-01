@@ -155,6 +155,24 @@
         .cal-dots { display: flex; flex-direction: column; gap: 2px; }
         .cal-dot-item { background: #D1FAE5; color: #065F46; font-size: .66rem; padding: 2px 4px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
 
+        /* ── 완료 업무 탭 ── */
+        .done-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .done-filter { background: #fff; border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
+        .done-filter select { padding: 7px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: .85rem; outline: none; font-family: inherit; color: var(--text); background: #fff; cursor: pointer; transition: border-color .2s; }
+        .done-filter select:focus { border-color: var(--primary); }
+        .done-filter input[type=text] { padding: 7px 11px; border: 1.5px solid var(--border); border-radius: 8px; font-size: .85rem; outline: none; font-family: inherit; color: var(--text); background: #fff; flex: 1; min-width: 140px; max-width: 240px; transition: border-color .2s; }
+        .done-filter input[type=text]:focus { border-color: var(--primary); }
+        .done-count { font-size: .82rem; color: var(--muted); margin-left: auto; white-space: nowrap; }
+        .done-list { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .done-date-group { margin-bottom: 22px; }
+        .done-date-header { font-size: .82rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; padding-bottom: 7px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+        .done-item { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px; margin-bottom: 7px; cursor: pointer; transition: border-color .2s, box-shadow .2s; display: flex; align-items: center; gap: 12px; }
+        .done-item:last-child { margin-bottom: 0; }
+        .done-item:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(79,70,229,.08); }
+        .done-item-info { flex: 1; min-width: 0; }
+        .done-item-title { font-weight: 600; font-size: .9rem; margin-bottom: 2px; }
+        .done-item-sub { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+
         /* 설정 드롭다운 */
         .settings-menu { position: absolute; right: 24px; top: 56px; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12); overflow: hidden; z-index: 30; min-width: 150px; display: none; }
         .settings-menu.open { display: block; }
@@ -213,6 +231,7 @@
         </div>
         <div class="tabs">
             <button class="tab-btn active" data-tab="board" onclick="switchTab('board')">📋 보드</button>
+            <button class="tab-btn" data-tab="done" onclick="switchTab('done')">✅ 완료 업무</button>
             <button class="tab-btn" data-tab="calendar" onclick="switchTab('calendar')">📅 완료 캘린더</button>
         </div>
     </div>
@@ -252,7 +271,7 @@
                 </div>
                 <div class="col">
                     <div class="col-head">
-                        <div class="col-title"><span class="dot dot-green"></span>완료 (7일 후 삭제)</div>
+                        <div class="col-title"><span class="dot dot-green"></span>완료</div>
                         <span class="col-count" id="cnt-dn">0</span>
                     </div>
                     <div class="col-body" id="col-dn"></div>
@@ -270,6 +289,28 @@
                 </div>
             </div>
             <div class="person-grid" id="person-grid"></div>
+        </div>
+    </div>
+
+    <!-- 탭: 완료 업무 -->
+    <div id="tab-done" class="tab-pane">
+        <div class="done-wrap">
+            <div class="done-filter">
+                <select id="f-done-year" onchange="applyDoneFilter()"></select>
+                <select id="f-done-month" onchange="applyDoneFilter()">
+                    <option value="0">전체 월</option>
+                    <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+                    <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+                    <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+                    <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+                </select>
+                <select id="f-done-day" onchange="applyDoneFilter()">
+                    <option value="0">전체 일</option>
+                </select>
+                <input type="text" id="f-done-q" placeholder="🔍 업무명 / 담당자 검색" oninput="applyDoneFilter()">
+                <span class="done-count" id="done-count">총 0건</span>
+            </div>
+            <div class="done-list" id="done-list"></div>
         </div>
     </div>
 
@@ -408,17 +449,9 @@ let tasks = [], members = [];
 function loadData() {
     tasks   = JSON.parse(localStorage.getItem('tasks')   || '[]');
     members = JSON.parse(localStorage.getItem('members') || '[]');
-    pruneOldDone();
 }
 function saveTasks()   { localStorage.setItem('tasks',   JSON.stringify(tasks)); }
 function saveMembers() { localStorage.setItem('members', JSON.stringify(members)); }
-
-function pruneOldDone() {
-    const cut = Date.now() - 7 * 86400000;
-    const before = tasks.length;
-    tasks = tasks.filter(t => !(t.status === '완료' && t.doneAt && t.doneAt < cut));
-    if (tasks.length !== before) saveTasks();
-}
 
 // 태스크에서 담당자 자동 추출 + 수동 추가 목록 합산
 function getAllAssignees() {
@@ -457,6 +490,7 @@ function initKakao() {
 function renderAll() {
     renderBoard();
     renderPersonSection();
+    if (activeTab === 'done')     renderDoneTab();
     if (activeTab === 'calendar') renderCalendarTab();
 }
 
@@ -466,6 +500,7 @@ function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.getElementById(`tab-${name}`).classList.add('active');
+    if (name === 'done')     renderDoneTab();
     if (name === 'calendar') renderCalendarTab();
 }
 
@@ -490,11 +525,6 @@ function renderCol(status, colId, cntId) {
 function taskCard(t) {
     const d = new Date(t.createdAt);
     const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
-    let expire = '';
-    if (t.status === '완료' && t.doneAt) {
-        const dl = 7 - Math.floor((Date.now() - t.doneAt) / 86400000);
-        if (dl <= 3) expire = `<div class="card-expire">⏱ ${dl}일 후 삭제</div>`;
-    }
     const btnMap = {
         '작업 시작 안함': [['작업중','▶ 시작'],['완료','✓ 완료']],
         '작업중':         [['완료','✓ 완료'],['작업 시작 안함','← 되돌리기']],
@@ -507,7 +537,6 @@ function taskCard(t) {
         <div class="card-title">${esc(t.title)}</div>
         ${t.desc     ? `<div class="card-sub">${esc(t.desc)}</div>` : ''}
         ${t.assignee ? `<div class="card-sub">👤 ${esc(t.assignee)}</div>` : ''}
-        ${expire}
         <div class="status-btns">${btns}</div>
         <div class="card-date">${dateStr}</div>
     </div>`;
@@ -577,6 +606,85 @@ function removeMember(name) {
     if (!confirm(`'${name}'을 인원 목록에서 제거할까요?`)) return;
     members = members.filter(m => m !== name);
     saveMembers(); renderPersonSection(); showToast(`${name} 제거됨`);
+}
+
+// ── 완료 업무 탭 ──
+function renderDoneTab() {
+    // 연도 옵션 동적 생성
+    const doneTasks = tasks.filter(t => t.status === '완료' && t.doneAt);
+    const years = [...new Set(doneTasks.map(t => new Date(t.doneAt).getFullYear()))];
+    const curYear = new Date().getFullYear();
+    if (!years.includes(curYear)) years.push(curYear);
+    years.sort((a, b) => b - a);
+
+    const ySel = document.getElementById('f-done-year');
+    const prevYear = ySel.value;
+    ySel.innerHTML = years.map(y => `<option value="${y}">${y}년</option>`).join('');
+    if (prevYear && years.includes(+prevYear)) ySel.value = prevYear;
+
+    // 일 옵션 동적 생성
+    const dSel = document.getElementById('f-done-day');
+    const prevDay = dSel.value;
+    dSel.innerHTML = '<option value="0">전체 일</option>' +
+        Array.from({length:31}, (_,i) => `<option value="${i+1}">${i+1}일</option>`).join('');
+    if (prevDay) dSel.value = prevDay;
+
+    applyDoneFilter();
+}
+
+function applyDoneFilter() {
+    const year  = +document.getElementById('f-done-year').value;
+    const month = +document.getElementById('f-done-month').value;
+    const day   = +document.getElementById('f-done-day').value;
+    const q     = document.getElementById('f-done-q').value.trim().toLowerCase();
+
+    let list = tasks.filter(t => {
+        if (t.status !== '완료' || !t.doneAt) return false;
+        const d = new Date(t.doneAt);
+        if (year  && d.getFullYear()   !== year)  return false;
+        if (month && d.getMonth() + 1  !== month) return false;
+        if (day   && d.getDate()       !== day)   return false;
+        if (q && !(t.title.toLowerCase().includes(q) || (t.assignee||'').toLowerCase().includes(q))) return false;
+        return true;
+    });
+    list.sort((a, b) => b.doneAt - a.doneAt);
+
+    document.getElementById('done-count').textContent = `총 ${list.length}건`;
+
+    if (!list.length) {
+        document.getElementById('done-list').innerHTML =
+            `<div class="empty-state"><div class="ei">📭</div><p>해당 조건의 완료 업무가 없습니다</p></div>`;
+        return;
+    }
+
+    // 날짜별 그룹핑
+    const byDate = {};
+    list.forEach(t => {
+        const d = new Date(t.doneAt);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        if (!byDate[key]) byDate[key] = [];
+        byDate[key].push(t);
+    });
+
+    const dowNames = ['일','월','화','수','목','금','토'];
+    let html = '';
+    Object.keys(byDate).sort((a, b) => b.localeCompare(a)).forEach(key => {
+        const d   = new Date(key);
+        const hdr = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${dowNames[d.getDay()]})`;
+        html += `<div class="done-date-group">
+            <div class="done-date-header"><span>${hdr}</span><span>${byDate[key].length}건</span></div>
+            ${byDate[key].map(t => `
+                <div class="done-item" onclick="openEdit('${t.id}')">
+                    <div class="done-item-info">
+                        <div class="done-item-title">${esc(t.title)}</div>
+                        ${t.desc     ? `<div class="done-item-sub">${esc(t.desc)}</div>` : ''}
+                        ${t.assignee ? `<div class="done-item-sub">👤 ${esc(t.assignee)}</div>` : ''}
+                    </div>
+                    <span class="badge" style="background:#D1FAE5;color:#065F46;flex-shrink:0">✓ 완료</span>
+                </div>`).join('')}
+        </div>`;
+    });
+    document.getElementById('done-list').innerHTML = html;
 }
 
 // ── 완료 캘린더 탭 ──
