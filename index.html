@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>팀 업무 리마인더</title>
+    <!-- Kakao SDK: KAKAO_APP_KEY 설정 후 아래 주석 해제 -->
+    <!-- <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script> -->
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #4F46E5;
+            --primary-h: #4338CA;
+            --bg: #F1F5F9;
+            --card: #FFFFFF;
+            --border: #E2E8F0;
+            --text: #1E293B;
+            --muted: #64748B;
+            --red: #EF4444;
+            --amber: #F59E0B;
+            --green: #10B981;
+            --radius: 10px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── 비밀번호 화면 ── */
+        #pw-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        }
+        .pw-card {
+            background: #fff;
+            padding: 44px 40px;
+            border-radius: 20px;
+            box-shadow: 0 24px 64px rgba(0,0,0,.22);
+            width: 340px;
+            text-align: center;
+        }
+        .pw-card .logo { font-size: 2.2rem; margin-bottom: 12px; }
+        .pw-card h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
+        .pw-card p { color: var(--muted); font-size: 0.875rem; margin-bottom: 24px; }
+        .pw-card input {
+            width: 100%; padding: 12px 16px;
+            border: 2px solid var(--border); border-radius: var(--radius);
+            font-size: 1rem; outline: none; margin-bottom: 10px;
+            transition: border-color .2s;
+        }
+        .pw-card input:focus { border-color: var(--primary); }
+        .pw-card .pw-btn {
+            width: 100%; padding: 12px;
+            background: var(--primary); color: #fff;
+            border: none; border-radius: var(--radius);
+            font-size: 1rem; font-weight: 600; cursor: pointer;
+            transition: background .2s;
+        }
+        .pw-card .pw-btn:hover { background: var(--primary-h); }
+        .pw-err { color: var(--red); font-size: .82rem; margin-top: 8px; min-height: 18px; }
+
+        /* ── 앱 레이아웃 ── */
+        #app { display: none; flex-direction: column; min-height: 100vh; }
+
+        /* 헤더 */
+        .header {
+            background: #fff; border-bottom: 1px solid var(--border);
+            padding: 14px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 20;
+        }
+        .header-title { font-size: 1.15rem; font-weight: 700; }
+        .header-date { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+
+        /* 리마인더 배너 */
+        .reminder-banner {
+            display: none;
+            background: #FFFBEB; border-bottom: 2px solid var(--amber);
+            padding: 11px 24px; align-items: center; gap: 12px;
+        }
+        .reminder-banner.show { display: flex; }
+        .banner-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .banner-text { flex: 1; font-size: .875rem; color: #92400E; }
+        .banner-text strong { font-weight: 700; }
+        .banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+        /* 버튼 공통 */
+        .btn {
+            padding: 8px 14px; border-radius: 8px; border: none;
+            font-size: .85rem; font-weight: 500; cursor: pointer;
+            transition: all .15s; white-space: nowrap;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-h); }
+        .btn-secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: #F8FAFC; }
+        .btn-kakao { background: #FEE500; color: #3C1E1E; font-weight: 700; }
+        .btn-kakao:hover { background: #FFD600; }
+        .btn-danger { background: #FEE2E2; color: var(--red); }
+        .btn-danger:hover { background: #FECACA; }
+        .btn-sm { padding: 5px 10px; font-size: .8rem; }
+
+        /* 보드 */
+        .board-wrap { flex: 1; padding: 20px 24px; }
+        .board {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+        }
+        @media (max-width: 760px) {
+            .board { grid-template-columns: 1fr; }
+            .header-actions .btn-secondary { display: none; }
+        }
+
+        /* 컬럼 */
+        .col {
+            background: var(--card);
+            border-radius: 14px; border: 1px solid var(--border);
+            overflow: hidden; display: flex; flex-direction: column;
+        }
+        .col-head {
+            padding: 13px 16px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .col-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: .9rem; }
+        .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .dot-red { background: var(--red); }
+        .dot-amber { background: var(--amber); }
+        .dot-green { background: var(--green); }
+        .col-count {
+            background: #F1F5F9; color: var(--muted);
+            padding: 2px 9px; border-radius: 20px; font-size: .78rem; font-weight: 700;
+        }
+        .col-body { padding: 12px; flex: 1; min-height: 180px; overflow-y: auto; max-height: 70vh; }
+
+        /* 태스크 카드 */
+        .task-card {
+            background: #F8FAFC; border: 1px solid var(--border);
+            border-radius: 9px; padding: 11px 12px; margin-bottom: 8px;
+            cursor: pointer; transition: border-color .2s, box-shadow .2s;
+        }
+        .task-card:last-child { margin-bottom: 0; }
+        .task-card:hover { border-color: var(--primary); box-shadow: 0 2px 10px rgba(79,70,229,.1); }
+        .task-card.is-done { opacity: .65; }
+        .card-title { font-weight: 600; font-size: .88rem; margin-bottom: 3px; word-break: break-all; }
+        .card-desc { font-size: .78rem; color: var(--muted); margin-bottom: 4px; word-break: break-all; }
+        .card-assignee { font-size: .78rem; color: var(--muted); margin-bottom: 6px; }
+        .card-expire { font-size: .72rem; color: #9CA3AF; margin-bottom: 6px; }
+        .status-btns { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 7px; }
+        .s-btn {
+            padding: 3px 8px; border-radius: 5px;
+            border: 1px solid var(--border); font-size: .75rem;
+            cursor: pointer; background: #fff; transition: all .12s;
+        }
+        .s-btn:hover { background: #EFF6FF; border-color: var(--primary); color: var(--primary); }
+        .card-date { font-size: .72rem; color: #CBD5E1; text-align: right; }
+
+        /* 빈 상태 */
+        .empty-state { text-align: center; padding: 32px 16px; color: var(--muted); }
+        .empty-state .ei { font-size: 2rem; margin-bottom: 8px; }
+        .empty-state p { font-size: .83rem; }
+
+        /* ── 모달 공통 ── */
+        .overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.45); z-index: 100;
+            align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .overlay.show { display: flex; }
+        .modal {
+            background: #fff; border-radius: 16px; padding: 28px;
+            width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 24px 64px rgba(0,0,0,.18);
+        }
+        .modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; }
+        .form-row { margin-bottom: 14px; }
+        .form-row label { display: block; font-size: .83rem; font-weight: 600; margin-bottom: 5px; }
+        .form-row input, .form-row textarea, .form-row select {
+            width: 100%; padding: 10px 13px;
+            border: 1.5px solid var(--border); border-radius: 8px;
+            font-size: .9rem; outline: none; transition: border-color .2s;
+            font-family: inherit; color: var(--text); background: #fff;
+        }
+        .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--primary); }
+        .form-row textarea { min-height: 72px; resize: vertical; }
+        .modal-actions {
+            display: flex; gap: 8px; justify-content: flex-end;
+            margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);
+        }
+
+        /* 리마인더 모달 리스트 */
+        .reminder-list { margin: 12px 0; }
+        .reminder-item {
+            padding: 10px 13px; background: #F8FAFC;
+            border: 1px solid var(--border); border-radius: 8px;
+            margin-bottom: 8px; display: flex;
+            justify-content: space-between; align-items: center; gap: 8px;
+        }
+        .ri-info .ri-title { font-weight: 600; font-size: .875rem; }
+        .ri-info .ri-sub { font-size: .78rem; color: var(--muted); }
+        .badge {
+            padding: 3px 10px; border-radius: 20px;
+            font-size: .75rem; font-weight: 600; white-space: nowrap;
+        }
+        .badge-red { background: #FEE2E2; color: #DC2626; }
+        .badge-amber { background: #FEF3C7; color: #D97706; }
+
+        /* 설정 드롭다운 */
+        .settings-menu {
+            position: absolute; right: 24px; top: 60px;
+            background: #fff; border: 1px solid var(--border);
+            border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12);
+            overflow: hidden; z-index: 30; min-width: 160px;
+            display: none;
+        }
+        .settings-menu.open { display: block; }
+        .settings-menu button {
+            width: 100%; padding: 11px 16px; text-align: left;
+            background: none; border: none; font-size: .875rem;
+            cursor: pointer; color: var(--text);
+        }
+        .settings-menu button:hover { background: #F8FAFC; }
+        .settings-menu button.danger { color: var(--red); }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 24px; right: 24px;
+            background: #1E293B; color: #fff;
+            padding: 11px 18px; border-radius: 9px; font-size: .85rem;
+            z-index: 200; opacity: 0; transform: translateY(8px);
+            transition: all .25s; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+<!-- ★ 비밀번호 화면 -->
+<div id="pw-screen">
+    <div class="pw-card">
+        <div class="logo">📋</div>
+        <h2>팀 업무 리마인더</h2>
+        <p>비밀번호를 입력하세요</p>
+        <input type="password" id="pw-input" placeholder="비밀번호"
+               onkeydown="if(event.key==='Enter')login()">
+        <button class="pw-btn" onclick="login()">입장하기</button>
+        <div class="pw-err" id="pw-err"></div>
+    </div>
+</div>
+
+<!-- ★ 메인 앱 -->
+<div id="app">
+
+    <!-- 헤더 -->
+    <div class="header">
+        <div>
+            <div class="header-title" id="site-title">팀 업무 리마인더</div>
+            <div class="header-date" id="today-date"></div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="openReminderModal()">📋 현황보기</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddTask()">+ 업무 추가</button>
+            <button class="btn btn-secondary btn-sm" onclick="toggleSettings()">⚙</button>
+        </div>
+    </div>
+
+    <!-- 설정 드롭다운 -->
+    <div class="settings-menu" id="settings-menu">
+        <button onclick="openSettings()">🔧 설정 변경</button>
+        <button onclick="logout()" class="danger">🔒 로그아웃</button>
+    </div>
+
+    <!-- 리마인더 배너 (새날 미완료 업무 알림) -->
+    <div class="reminder-banner" id="reminder-banner">
+        <span class="banner-icon">⚠️</span>
+        <div class="banner-text">
+            <strong>미완료 업무 알림</strong>
+            <span id="banner-text"> — 어제부터 이어진 업무가 있습니다.</span>
+        </div>
+        <div class="banner-actions">
+            <button class="btn btn-kakao btn-sm" onclick="shareKakao()">카카오톡 공유</button>
+            <button class="btn btn-secondary btn-sm" onclick="dismissBanner()">닫기</button>
+        </div>
+    </div>
+
+    <!-- 칸반 보드 -->
+    <div class="board-wrap">
+        <div class="board">
+            <!-- 작업 시작 안함 -->
+            <div class="col">
+                <div class="col-head">
+                    <div class="col-title"><span class="dot dot-red"></span>작업 시작 안함</div>
+                    <span class="col-count" id="cnt-ns">0</span>
+                </div>
+                <div class="col-body" id="col-ns"></div>
+            </div>
+            <!-- 작업중 -->
+            <div class="col">
+                <div class="col-head">
+                    <div class="col-title"><span class="dot dot-amber"></span>작업중</div>
+                    <span class="col-count" id="cnt-ip">0</span>
+                </div>
+                <div class="col-body" id="col-ip"></div>
+            </div>
+            <!-- 완료 -->
+            <div class="col">
+                <div class="col-head">
+                    <div class="col-title"><span class="dot dot-green"></span>완료 (7일 후 삭제)</div>
+                    <span class="col-count" id="cnt-dn">0</span>
+                </div>
+                <div class="col-body" id="col-dn"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ★ 업무 추가/수정 모달 -->
+<div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
+    <div class="modal">
+        <h2 id="modal-h">업무 추가</h2>
+        <div class="form-row">
+            <label>업무명 *</label>
+            <input id="f-title" type="text" placeholder="업무 제목">
+        </div>
+        <div class="form-row">
+            <label>설명 (선택)</label>
+            <textarea id="f-desc" placeholder="상세 내용"></textarea>
+        </div>
+        <div class="form-row">
+            <label>담당자 (선택)</label>
+            <input id="f-assignee" type="text" placeholder="담당자 이름">
+        </div>
+        <div class="form-row">
+            <label>상태</label>
+            <select id="f-status">
+                <option value="작업 시작 안함">작업 시작 안함</option>
+                <option value="작업중">작업중</option>
+                <option value="완료">완료</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeTaskModal()">취소</button>
+            <button class="btn btn-danger btn-sm" id="del-btn" onclick="deleteEditing()" style="display:none">삭제</button>
+            <button class="btn btn-primary" onclick="saveTask()">저장</button>
+        </div>
+    </div>
+</div>
+
+<!-- ★ 현황/리마인더 모달 -->
+<div class="overlay" id="remind-overlay" onclick="if(event.target===this)closeReminderModal()">
+    <div class="modal">
+        <h2>📋 미완료 업무 현황</h2>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:4px">
+            현재 진행 중이거나 시작되지 않은 업무입니다.
+        </p>
+        <div class="reminder-list" id="remind-list"></div>
+        <div class="modal-actions">
+            <button class="btn btn-kakao" onclick="shareKakao()">📤 카카오톡으로 공유</button>
+            <button class="btn btn-secondary" onclick="closeReminderModal()">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- ★ 설정 모달 -->
+<div class="overlay" id="cfg-overlay" onclick="if(event.target===this)closeCfgModal()">
+    <div class="modal">
+        <h2>⚙ 설정</h2>
+        <div class="form-row">
+            <label>사이트 제목</label>
+            <input id="cfg-title" type="text" placeholder="팀 업무 리마인더">
+        </div>
+        <div class="form-row">
+            <label>비밀번호 변경 (비워두면 유지)</label>
+            <input id="cfg-pw" type="password" placeholder="새 비밀번호">
+        </div>
+        <div class="form-row">
+            <label>카카오 JavaScript 앱키 (선택)</label>
+            <input id="cfg-kakao" type="text" placeholder="카카오 개발자 콘솔에서 발급">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeCfgModal()">취소</button>
+            <button class="btn btn-primary" onclick="saveCfg()">저장</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════
+//  CONFIG — localStorage에서 로드, 없으면 기본값
+// ════════════════════════════════════════════
+const DEFAULT_CFG = {
+    password: 'team1234',   // 초기 비밀번호 (설정 화면에서 변경 가능)
+    siteTitle: '팀 업무 리마인더',
+    kakaoKey: '',
+};
+let CFG = { ...DEFAULT_CFG, ...JSON.parse(localStorage.getItem('__cfg') || '{}') };
+
+function saveCfgToStorage() {
+    localStorage.setItem('__cfg', JSON.stringify(CFG));
+}
+
+// ════════════════════════════════════════════
+//  인증
+// ════════════════════════════════════════════
+function login() {
+    const val = document.getElementById('pw-input').value;
+    if (val === CFG.password) {
+        sessionStorage.setItem('auth', '1');
+        document.getElementById('pw-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        bootApp();
+    } else {
+        document.getElementById('pw-err').textContent = '비밀번호가 올바르지 않습니다.';
+        document.getElementById('pw-input').value = '';
+    }
+}
+function logout() {
+    sessionStorage.removeItem('auth');
+    location.reload();
+}
+
+// ════════════════════════════════════════════
+//  앱 초기화
+// ════════════════════════════════════════════
+let tasks = [];
+
+function bootApp() {
+    document.title = CFG.siteTitle;
+    document.getElementById('site-title').textContent = CFG.siteTitle;
+
+    const now = new Date();
+    const days = ['일','월','화','수','목','금','토'];
+    document.getElementById('today-date').textContent =
+        `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
+
+    initKakao();
+    loadTasks();
+    checkDailyReminder();
+}
+
+// ════════════════════════════════════════════
+//  Kakao 초기화
+// ════════════════════════════════════════════
+function initKakao() {
+    if (CFG.kakaoKey && window.Kakao && !Kakao.isInitialized()) {
+        Kakao.init(CFG.kakaoKey);
+    }
+}
+
+// ════════════════════════════════════════════
+//  데이터 (localStorage)
+// ════════════════════════════════════════════
+function loadTasks() {
+    tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    pruneOldDone();
+    renderBoard();
+}
+
+function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+}
+
+function pruneOldDone() {
+    const cutoff = Date.now() - 7 * 86400000;
+    const before = tasks.length;
+    tasks = tasks.filter(t => !(t.status === '완료' && t.doneAt && t.doneAt < cutoff));
+    if (tasks.length !== before) saveTasks();
+}
+
+// ════════════════════════════════════════════
+//  렌더링
+// ════════════════════════════════════════════
+function renderBoard() {
+    renderCol('작업 시작 안함', 'col-ns', 'cnt-ns');
+    renderCol('작업중', 'col-ip', 'cnt-ip');
+    renderCol('완료', 'col-dn', 'cnt-dn');
+}
+
+function renderCol(status, colId, cntId) {
+    const list = tasks.filter(t => t.status === status);
+    document.getElementById(cntId).textContent = list.length;
+    const el = document.getElementById(colId);
+
+    if (!list.length) {
+        el.innerHTML = `<div class="empty-state"><div class="ei">${status==='완료'?'✅':'📝'}</div><p>업무 없음</p></div>`;
+        return;
+    }
+    el.innerHTML = list.map(taskCard).join('');
+}
+
+function taskCard(t) {
+    const created = new Date(t.createdAt);
+    const dateStr = `${created.getMonth()+1}/${created.getDate()}`;
+
+    let expire = '';
+    if (t.status === '완료' && t.doneAt) {
+        const dLeft = 7 - Math.floor((Date.now() - t.doneAt) / 86400000);
+        if (dLeft <= 3) expire = `<div class="card-expire">⏱ ${dLeft}일 후 자동 삭제</div>`;
+    }
+
+    const btns = statusButtons(t);
+
+    return `<div class="task-card${t.status==='완료'?' is-done':''}" onclick="openEdit('${t.id}')">
+        <div class="card-title">${esc(t.title)}</div>
+        ${t.desc ? `<div class="card-desc">${esc(t.desc)}</div>` : ''}
+        ${t.assignee ? `<div class="card-assignee">👤 ${esc(t.assignee)}</div>` : ''}
+        ${expire}
+        <div class="status-btns">${btns}</div>
+        <div class="card-date">${dateStr}</div>
+    </div>`;
+}
+
+function statusButtons(t) {
+    const map = {
+        '작업 시작 안함': [['작업중','▶ 시작'],['완료','✓ 완료']],
+        '작업중':         [['완료','✓ 완료'],['작업 시작 안함','← 되돌리기']],
+        '완료':           [['작업중','↩ 재개'],['작업 시작 안함','처음으로']],
+    };
+    return (map[t.status]||[]).map(([s,label]) =>
+        `<button class="s-btn" onclick="event.stopPropagation();quickStatus('${t.id}','${s}')">${label}</button>`
+    ).join('');
+}
+
+async function quickStatus(id, newStatus) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    t.status = newStatus;
+    if (newStatus === '완료') t.doneAt = Date.now();
+    else t.doneAt = null;
+    saveTasks();
+    renderBoard();
+    showToast(`상태 변경: ${newStatus}`);
+}
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s||'';
+    return d.innerHTML;
+}
+
+// ════════════════════════════════════════════
+//  일별 리마인더 배너 (새날 첫 접속)
+// ════════════════════════════════════════════
+function checkDailyReminder() {
+    const today = new Date().toDateString();
+    const lastVisit = localStorage.getItem('last_visit');
+    const dismissed = localStorage.getItem('banner_dismissed');
+
+    localStorage.setItem('last_visit', today);
+
+    if (dismissed === today) return; // 오늘 이미 닫음
+    if (!lastVisit || lastVisit === today) return; // 오늘 첫 방문이 아님 (재로드)
+
+    // 새날 접속 — 미완료 업무 확인
+    const incomplete = tasks.filter(t => t.status !== '완료');
+    if (!incomplete.length) return;
+
+    const ns = incomplete.filter(t => t.status === '작업 시작 안함').length;
+    const ip = incomplete.filter(t => t.status === '작업중').length;
+    let parts = [];
+    if (ip) parts.push(`작업중 ${ip}건`);
+    if (ns) parts.push(`미시작 ${ns}건`);
+    document.getElementById('banner-text').textContent = ` — ${parts.join(' | ')}`;
+    document.getElementById('reminder-banner').classList.add('show');
+}
+
+function dismissBanner() {
+    document.getElementById('reminder-banner').classList.remove('show');
+    localStorage.setItem('banner_dismissed', new Date().toDateString());
+}
+
+// ════════════════════════════════════════════
+//  현황 모달
+// ════════════════════════════════════════════
+function openReminderModal() {
+    const list = tasks.filter(t => t.status !== '완료');
+    const el = document.getElementById('remind-list');
+    if (!list.length) {
+        el.innerHTML = `<div class="empty-state"><div class="ei">🎉</div><p>모든 업무가 완료되었습니다!</p></div>`;
+    } else {
+        el.innerHTML = list.map(t => `
+            <div class="reminder-item">
+                <div class="ri-info">
+                    <div class="ri-title">${esc(t.title)}</div>
+                    ${t.assignee ? `<div class="ri-sub">👤 ${esc(t.assignee)}</div>` : ''}
+                </div>
+                <span class="badge ${t.status==='작업중'?'badge-amber':'badge-red'}">${t.status}</span>
+            </div>`).join('');
+    }
+    document.getElementById('remind-overlay').classList.add('show');
+}
+function closeReminderModal() {
+    document.getElementById('remind-overlay').classList.remove('show');
+}
+
+// ════════════════════════════════════════════
+//  카카오톡 공유 (앱키 없으면 클립보드)
+// ════════════════════════════════════════════
+function shareKakao() {
+    const incomplete = tasks.filter(t => t.status !== '완료');
+    const text = buildShareText(incomplete);
+
+    if (window.Kakao && Kakao.isInitialized()) {
+        Kakao.Share.sendDefault({
+            objectType: 'text',
+            text,
+            link: { mobileWebUrl: location.href, webUrl: location.href },
+        });
+    } else {
+        // 클립보드 복사 후 안내
+        navigator.clipboard.writeText(text)
+            .then(() => showToast('📋 클립보드에 복사됨! 카카오톡에 붙여넣기 하세요.', 4000))
+            .catch(() => { alert(text); });
+    }
+}
+
+function buildShareText(list) {
+    const d = new Date();
+    let msg = `📋 [팀 업무 리마인더] ${d.getMonth()+1}월 ${d.getDate()}일\n\n`;
+    const ip = list.filter(t => t.status === '작업중');
+    const ns = list.filter(t => t.status === '작업 시작 안함');
+    if (ip.length) {
+        msg += `🔶 작업중 (${ip.length}건)\n`;
+        ip.forEach(t => { msg += `  • ${t.title}${t.assignee?` (${t.assignee})`:''}\n`; });
+        msg += '\n';
+    }
+    if (ns.length) {
+        msg += `🔴 미시작 (${ns.length}건)\n`;
+        ns.forEach(t => { msg += `  • ${t.title}${t.assignee?` (${t.assignee})`:''}\n`; });
+    }
+    if (!ip.length && !ns.length) msg += '✅ 미완료 업무 없음';
+    return msg.trim();
+}
+
+// ════════════════════════════════════════════
+//  업무 추가/수정 모달
+// ════════════════════════════════════════════
+let editId = null;
+
+function openAddTask() {
+    editId = null;
+    document.getElementById('modal-h').textContent = '업무 추가';
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-assignee').value = '';
+    document.getElementById('f-status').value = '작업 시작 안함';
+    document.getElementById('del-btn').style.display = 'none';
+    document.getElementById('task-overlay').classList.add('show');
+    document.getElementById('f-title').focus();
+}
+
+function openEdit(id) {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    editId = id;
+    document.getElementById('modal-h').textContent = '업무 수정';
+    document.getElementById('f-title').value = t.title;
+    document.getElementById('f-desc').value = t.desc || '';
+    document.getElementById('f-assignee').value = t.assignee || '';
+    document.getElementById('f-status').value = t.status;
+    document.getElementById('del-btn').style.display = 'inline-block';
+    document.getElementById('task-overlay').classList.add('show');
+    document.getElementById('f-title').focus();
+}
+
+function closeTaskModal() {
+    document.getElementById('task-overlay').classList.remove('show');
+    editId = null;
+}
+
+function saveTask() {
+    const title = document.getElementById('f-title').value.trim();
+    if (!title) { showToast('업무명을 입력하세요.'); document.getElementById('f-title').focus(); return; }
+
+    const status = document.getElementById('f-status').value;
+
+    if (editId) {
+        const t = tasks.find(x => x.id === editId);
+        if (t) {
+            t.title = title;
+            t.desc = document.getElementById('f-desc').value.trim();
+            t.assignee = document.getElementById('f-assignee').value.trim();
+            if (t.status !== '완료' && status === '완료') t.doneAt = Date.now();
+            if (t.status === '완료' && status !== '완료') t.doneAt = null;
+            t.status = status;
+        }
+        showToast('업무가 수정되었습니다.');
+    } else {
+        tasks.unshift({
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+            title,
+            desc: document.getElementById('f-desc').value.trim(),
+            assignee: document.getElementById('f-assignee').value.trim(),
+            status,
+            createdAt: Date.now(),
+            doneAt: status === '완료' ? Date.now() : null,
+        });
+        showToast('업무가 추가되었습니다.');
+    }
+
+    saveTasks();
+    renderBoard();
+    closeTaskModal();
+}
+
+function deleteEditing() {
+    if (!editId) return;
+    if (!confirm('이 업무를 삭제하시겠습니까?')) return;
+    tasks = tasks.filter(t => t.id !== editId);
+    saveTasks();
+    renderBoard();
+    showToast('삭제되었습니다.');
+    closeTaskModal();
+}
+
+// ════════════════════════════════════════════
+//  설정 모달
+// ════════════════════════════════════════════
+function toggleSettings() {
+    const m = document.getElementById('settings-menu');
+    m.classList.toggle('open');
+    if (m.classList.contains('open')) {
+        setTimeout(() => document.addEventListener('click', closeSMenu), 0);
+    }
+}
+function closeSMenu(e) {
+    const m = document.getElementById('settings-menu');
+    if (!m.contains(e.target)) {
+        m.classList.remove('open');
+        document.removeEventListener('click', closeSMenu);
+    }
+}
+function openSettings() {
+    document.getElementById('settings-menu').classList.remove('open');
+    document.getElementById('cfg-title').value = CFG.siteTitle;
+    document.getElementById('cfg-pw').value = '';
+    document.getElementById('cfg-kakao').value = CFG.kakaoKey;
+    document.getElementById('cfg-overlay').classList.add('show');
+}
+function closeCfgModal() {
+    document.getElementById('cfg-overlay').classList.remove('show');
+}
+function saveCfg() {
+    const newTitle = document.getElementById('cfg-title').value.trim();
+    const newPw = document.getElementById('cfg-pw').value;
+    const newKakao = document.getElementById('cfg-kakao').value.trim();
+
+    if (newTitle) CFG.siteTitle = newTitle;
+    if (newPw) CFG.password = newPw;
+    CFG.kakaoKey = newKakao;
+    saveCfgToStorage();
+
+    document.title = CFG.siteTitle;
+    document.getElementById('site-title').textContent = CFG.siteTitle;
+    initKakao();
+    closeCfgModal();
+    showToast('설정이 저장되었습니다.');
+}
+
+// ════════════════════════════════════════════
+//  Toast
+// ════════════════════════════════════════════
+let _toastTimer;
+function showToast(msg, ms=2500) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ════════════════════════════════════════════
+//  페이지 진입
+// ════════════════════════════════════════════
+window.addEventListener('load', () => {
+    if (sessionStorage.getItem('auth') === '1') {
+        document.getElementById('pw-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        bootApp();
+    } else {
+        document.getElementById('pw-input').focus();
+    }
+});
+</script>
+</body>
+</html>
