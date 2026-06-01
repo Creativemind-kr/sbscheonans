@@ -12,7 +12,6 @@
             --bg: #F1F5F9; --card: #fff; --border: #E2E8F0;
             --text: #1E293B; --muted: #64748B;
             --red: #EF4444; --amber: #F59E0B; --green: #10B981;
-            --radius: 10px;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
@@ -22,9 +21,9 @@
         .pw-card .logo { font-size: 2.2rem; margin-bottom: 12px; }
         .pw-card h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
         .pw-card p { color: var(--muted); font-size: .875rem; margin-bottom: 24px; }
-        .pw-card input { width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--radius); font-size: 1rem; outline: none; margin-bottom: 10px; transition: border-color .2s; }
+        .pw-card input { width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; outline: none; margin-bottom: 10px; transition: border-color .2s; }
         .pw-card input:focus { border-color: var(--primary); }
-        .pw-card .pw-btn { width: 100%; padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius); font-size: 1rem; font-weight: 600; cursor: pointer; }
+        .pw-card .pw-btn { width: 100%; padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; }
         .pw-card .pw-btn:hover { background: var(--primary-h); }
         .pw-err { color: var(--red); font-size: .82rem; margin-top: 8px; min-height: 18px; }
 
@@ -59,13 +58,16 @@
         .btn-danger { background: #FEE2E2; color: var(--red); }
         .btn-danger:hover { background: #FECACA; }
         .btn-sm { padding: 5px 10px; font-size: .8rem; }
+        .badge { padding: 3px 9px; border-radius: 20px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+        .badge-red { background: #FEE2E2; color: #DC2626; }
+        .badge-amber { background: #FEF3C7; color: #D97706; }
 
         /* 탭 패널 */
         .tab-pane { display: none; flex: 1; flex-direction: column; }
         .tab-pane.active { display: flex; }
 
         /* ── 보드 탭 ── */
-        .board-wrap { flex: 1; padding: 20px 24px; }
+        .board-wrap { padding: 20px 24px 0; }
         .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
         @media (max-width: 760px) { .board { grid-template-columns: 1fr; } }
         .col { background: var(--card); border-radius: 14px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
@@ -74,11 +76,11 @@
         .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
         .dot-red { background: var(--red); } .dot-amber { background: var(--amber); } .dot-green { background: var(--green); }
         .col-count { background: #F1F5F9; color: var(--muted); padding: 2px 9px; border-radius: 20px; font-size: .78rem; font-weight: 700; }
-        .col-body { padding: 12px; flex: 1; min-height: 160px; overflow-y: auto; max-height: 65vh; }
+        .col-body { padding: 12px; flex: 1; min-height: 140px; overflow-y: auto; max-height: 50vh; }
         .task-card { background: #F8FAFC; border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; margin-bottom: 8px; cursor: pointer; transition: border-color .2s, box-shadow .2s; }
         .task-card:last-child { margin-bottom: 0; }
         .task-card:hover { border-color: var(--primary); box-shadow: 0 2px 10px rgba(79,70,229,.1); }
-        .task-card.is-done { opacity: .65; }
+        .task-card.is-done { opacity: .6; }
         .card-title { font-weight: 600; font-size: .88rem; margin-bottom: 3px; word-break: break-all; }
         .card-sub { font-size: .78rem; color: var(--muted); margin-bottom: 4px; word-break: break-all; }
         .card-expire { font-size: .72rem; color: #9CA3AF; margin-bottom: 5px; }
@@ -86,51 +88,72 @@
         .s-btn { padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: .75rem; cursor: pointer; background: #fff; transition: all .12s; }
         .s-btn:hover { background: #EFF6FF; border-color: var(--primary); color: var(--primary); }
         .card-date { font-size: .72rem; color: #CBD5E1; text-align: right; }
-        .badge { padding: 3px 9px; border-radius: 20px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
-        .badge-red { background: #FEE2E2; color: #DC2626; }
-        .badge-amber { background: #FEF3C7; color: #D97706; }
-        .empty-state { text-align: center; padding: 32px 16px; color: var(--muted); }
-        .empty-state .ei { font-size: 2rem; margin-bottom: 8px; }
+        .empty-state { text-align: center; padding: 28px 16px; color: var(--muted); }
+        .empty-state .ei { font-size: 1.8rem; margin-bottom: 8px; }
         .empty-state p { font-size: .83rem; }
 
-        /* ── 담당자별 탭 ── */
-        .person-wrap { flex: 1; padding: 20px 24px; overflow-y: auto; }
-        .person-add-row { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
-        .person-add-row input { flex: 1; min-width: 160px; max-width: 260px; padding: 9px 13px; border: 1.5px solid var(--border); border-radius: 8px; font-size: .9rem; outline: none; transition: border-color .2s; font-family: inherit; }
+        /* ── 담당자 섹션 (보드 하단) ── */
+        .person-section { margin: 20px 24px 24px; }
+        .person-section-head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 14px; padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap; gap: 8px;
+        }
+        .person-section-title { font-size: .95rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+        .person-add-row { display: flex; gap: 8px; align-items: center; }
+        .person-add-row input { padding: 7px 11px; border: 1.5px solid var(--border); border-radius: 8px; font-size: .85rem; outline: none; transition: border-color .2s; font-family: inherit; width: 150px; }
         .person-add-row input:focus { border-color: var(--primary); }
-        .person-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
-        .person-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
-        .person-card-head { padding: 13px 16px; background: #F8FAFC; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-        .p-avatar-wrap { display: flex; align-items: center; gap: 10px; }
-        .p-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .95rem; color: #fff; flex-shrink: 0; }
-        .p-name { font-weight: 700; font-size: .95rem; }
-        .p-sub { font-size: .75rem; color: var(--muted); }
-        .p-remove { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .9rem; padding: 4px; border-radius: 4px; transition: color .15s; }
+        .person-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+        .person-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .person-card-head { padding: 11px 14px; background: #F8FAFC; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .p-avatar-wrap { display: flex; align-items: center; gap: 9px; }
+        .p-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .88rem; color: #fff; flex-shrink: 0; }
+        .p-name { font-weight: 700; font-size: .88rem; }
+        .p-sub { font-size: .72rem; color: var(--muted); }
+        .p-remove { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .85rem; padding: 3px; border-radius: 4px; transition: color .15s; }
         .p-remove:hover { color: var(--red); }
-        .person-card-body { padding: 10px 12px; }
-        .p-task-item { padding: 8px 10px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 7px; margin-bottom: 6px; cursor: pointer; transition: border-color .15s; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .person-card-body { padding: 8px 10px; }
+        .p-task-item { padding: 7px 9px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 7px; margin-bottom: 5px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 6px; transition: border-color .15s; }
         .p-task-item:last-child { margin-bottom: 0; }
         .p-task-item:hover { border-color: var(--primary); }
-        .p-task-title { font-size: .85rem; font-weight: 500; flex: 1; }
-        .p-empty { text-align: center; padding: 20px 16px; color: var(--muted); font-size: .82rem; }
+        .p-task-title { font-size: .82rem; font-weight: 500; flex: 1; }
+        .p-empty { text-align: center; padding: 16px; color: var(--muted); font-size: .8rem; }
 
         /* ── 완료 캘린더 탭 ── */
-        .cal-wrap { flex: 1; padding: 20px 24px; overflow-y: auto; }
-        .cal-nav { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 16px; }
-        .cal-nav-btn { background: #fff; border: 1px solid var(--border); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font-size: 1.1rem; color: var(--text); transition: background .15s; }
+        .cal-layout { flex: 1; display: grid; grid-template-columns: 280px 1fr; gap: 0; overflow: hidden; }
+        @media (max-width: 900px) { .cal-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } }
+
+        /* 좌측: 미완료 업무 */
+        .cal-left { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; background: #fff; }
+        .cal-left-head { padding: 16px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: .9rem; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .cal-left-body { flex: 1; overflow-y: auto; padding: 12px; }
+        .cal-status-group { margin-bottom: 14px; }
+        .cal-status-label { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; padding: 0 2px; }
+        .cal-task-li { padding: 8px 10px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 7px; margin-bottom: 5px; cursor: pointer; transition: border-color .15s; }
+        .cal-task-li:last-child { margin-bottom: 0; }
+        .cal-task-li:hover { border-color: var(--primary); }
+        .cal-task-li-title { font-size: .83rem; font-weight: 500; }
+        .cal-task-li-sub { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+
+        /* 우측: 캘린더 */
+        .cal-right { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+        .cal-nav { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 16px; border-bottom: 1px solid var(--border); background: #fff; flex-shrink: 0; }
+        .cal-nav-btn { background: #fff; border: 1px solid var(--border); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 1rem; color: var(--text); transition: background .15s; }
         .cal-nav-btn:hover { background: #F1F5F9; }
-        .cal-month { font-weight: 700; font-size: 1.05rem; }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 760px; margin: 0 auto; }
-        .cal-dow { text-align: center; padding: 8px 4px; font-size: .75rem; font-weight: 600; color: var(--muted); }
-        .cal-cell { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 7px 6px; min-height: 70px; }
+        .cal-month { font-weight: 700; font-size: 1rem; }
+        .cal-body { flex: 1; overflow-y: auto; padding: 16px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .cal-dow { text-align: center; padding: 6px 2px; font-size: .75rem; font-weight: 700; color: var(--muted); }
+        .cal-cell { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-height: 72px; }
         .cal-cell.empty { background: transparent; border-color: transparent; }
         .cal-cell.is-today { border-color: var(--primary); background: #EEF2FF; }
         .cal-cell.has-done { background: #F0FDF4; border-color: var(--green); cursor: pointer; }
         .cal-cell.has-done:hover { background: #DCFCE7; box-shadow: 0 2px 8px rgba(16,185,129,.15); }
-        .cal-day-num { font-size: .78rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+        .cal-day-num { font-size: .75rem; font-weight: 600; color: var(--muted); margin-bottom: 3px; }
         .cal-cell.is-today .cal-day-num { color: var(--primary); }
         .cal-dots { display: flex; flex-direction: column; gap: 2px; }
-        .cal-dot { background: #D1FAE5; color: #065F46; font-size: .68rem; padding: 2px 5px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+        .cal-dot-item { background: #D1FAE5; color: #065F46; font-size: .66rem; padding: 2px 4px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
 
         /* 설정 드롭다운 */
         .settings-menu { position: absolute; right: 24px; top: 56px; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12); overflow: hidden; z-index: 30; min-width: 150px; display: none; }
@@ -139,7 +162,7 @@
         .settings-menu button:hover { background: #F8FAFC; }
         .settings-menu button.danger { color: var(--red); }
 
-        /* ── 모달 ── */
+        /* 모달 */
         .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
         .overlay.show { display: flex; }
         .modal { background: #fff; border-radius: 16px; padding: 28px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,.18); }
@@ -162,20 +185,19 @@
 </head>
 <body>
 
-<!-- 비밀번호 화면 -->
+<!-- 비밀번호 -->
 <div id="pw-screen">
     <div class="pw-card">
         <div class="logo">📋</div>
         <h2>팀 업무 리마인더</h2>
         <p>비밀번호를 입력하세요</p>
-        <input type="password" id="pw-input" placeholder="비밀번호"
-               onkeydown="if(event.key==='Enter')login()">
+        <input type="password" id="pw-input" placeholder="비밀번호" onkeydown="if(event.key==='Enter')login()">
         <button class="pw-btn" onclick="login()">입장하기</button>
         <div class="pw-err" id="pw-err"></div>
     </div>
 </div>
 
-<!-- 메인 앱 -->
+<!-- 앱 -->
 <div id="app">
     <div class="header">
         <div class="header-top">
@@ -191,21 +213,18 @@
         </div>
         <div class="tabs">
             <button class="tab-btn active" data-tab="board" onclick="switchTab('board')">📋 보드</button>
-            <button class="tab-btn" data-tab="person" onclick="switchTab('person')">👤 담당자별</button>
             <button class="tab-btn" data-tab="calendar" onclick="switchTab('calendar')">📅 완료 캘린더</button>
         </div>
     </div>
 
-    <!-- 설정 드롭다운 -->
     <div class="settings-menu" id="settings-menu">
         <button onclick="openSettings()">🔧 설정 변경</button>
         <button onclick="logout()" class="danger">🔒 로그아웃</button>
     </div>
 
-    <!-- 리마인더 배너 -->
     <div class="reminder-banner" id="reminder-banner">
         <span>⚠️</span>
-        <div class="banner-text"><strong>미완료 업무 알림</strong><span id="banner-text"> — 어제부터 이어진 업무가 있습니다.</span></div>
+        <div class="banner-text"><strong>미완료 업무 알림</strong><span id="banner-text"></span></div>
         <div class="banner-actions">
             <button class="btn btn-kakao btn-sm" onclick="shareKakao()">카카오톡 공유</button>
             <button class="btn btn-secondary btn-sm" onclick="dismissBanner()">닫기</button>
@@ -214,6 +233,7 @@
 
     <!-- 탭: 보드 -->
     <div id="tab-board" class="tab-pane active">
+        <!-- 칸반 -->
         <div class="board-wrap">
             <div class="board">
                 <div class="col">
@@ -239,27 +259,47 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- 탭: 담당자별 -->
-    <div id="tab-person" class="tab-pane">
-        <div class="person-wrap" id="person-wrap"></div>
+        <!-- 담당자 섹션 -->
+        <div class="person-section">
+            <div class="person-section-head">
+                <div class="person-section-title">👤 담당자별 업무</div>
+                <div class="person-add-row">
+                    <input id="new-member-input" type="text" placeholder="인원 직접 추가"
+                           onkeydown="if(event.key==='Enter')addMember()">
+                    <button class="btn btn-secondary btn-sm" onclick="addMember()">추가</button>
+                </div>
+            </div>
+            <div class="person-grid" id="person-grid"></div>
+        </div>
     </div>
 
     <!-- 탭: 완료 캘린더 -->
     <div id="tab-calendar" class="tab-pane">
-        <div class="cal-wrap">
-            <div class="cal-nav">
-                <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
-                <span class="cal-month" id="cal-month-label"></span>
-                <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+        <div class="cal-layout">
+            <!-- 좌측: 미완료 업무 -->
+            <div class="cal-left">
+                <div class="cal-left-head">
+                    <span>📌 진행중인 업무</span>
+                    <span class="col-count" id="cal-left-count">0</span>
+                </div>
+                <div class="cal-left-body" id="cal-left-body"></div>
             </div>
-            <div class="cal-grid" id="cal-grid"></div>
+            <!-- 우측: 캘린더 -->
+            <div class="cal-right">
+                <div class="cal-nav">
+                    <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
+                    <span class="cal-month" id="cal-month-label"></span>
+                    <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+                </div>
+                <div class="cal-body">
+                    <div class="cal-grid" id="cal-grid"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- 업무 추가/수정 모달 -->
+<!-- 업무 모달 -->
 <div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
     <div class="modal">
         <h2 id="task-modal-h">업무 추가</h2>
@@ -304,10 +344,10 @@
     </div>
 </div>
 
-<!-- 캘린더 날짜 클릭 모달 -->
+<!-- 날짜 클릭 모달 -->
 <div class="overlay" id="day-overlay" onclick="if(event.target===this)closeDayModal()">
     <div class="modal">
-        <h2 id="day-modal-h">완료 업무</h2>
+        <h2 id="day-modal-h"></h2>
         <div class="reminder-list" id="day-modal-list"></div>
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closeDayModal()">닫기</button>
@@ -321,7 +361,7 @@
         <h2>⚙ 설정</h2>
         <div class="form-row">
             <label>사이트 제목</label>
-            <input id="cfg-title" type="text" placeholder="팀 업무 리마인더">
+            <input id="cfg-title" type="text">
         </div>
         <div class="form-row">
             <label>카카오 JavaScript 앱키 (선택)</label>
@@ -337,28 +377,20 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ══════════════════════════════════════════════
-//  비밀번호 — 소스코드에서만 관리 (localStorage 미사용)
-// ══════════════════════════════════════════════
-const SOURCE_PASSWORD = '9988';   // ← 비밀번호 변경 시 여기만 수정
+// ── 비밀번호 (소스코드에서만 관리) ──
+const SOURCE_PASSWORD = '9988';
 
-// ══════════════════════════════════════════════
-//  설정 (제목, 카카오키만 localStorage)
-// ══════════════════════════════════════════════
+// ── 설정 ──
 function loadCFG() {
     const s = JSON.parse(localStorage.getItem('__cfg') || '{}');
     return { siteTitle: s.siteTitle || '팀 업무 리마인더', kakaoKey: s.kakaoKey || '' };
 }
 let CFG = loadCFG();
-
 function saveCFGStorage() { localStorage.setItem('__cfg', JSON.stringify({ siteTitle: CFG.siteTitle, kakaoKey: CFG.kakaoKey })); }
 
-// ══════════════════════════════════════════════
-//  인증
-// ══════════════════════════════════════════════
+// ── 인증 ──
 function login() {
-    const val = document.getElementById('pw-input').value;
-    if (val === SOURCE_PASSWORD) {
+    if (document.getElementById('pw-input').value === SOURCE_PASSWORD) {
         sessionStorage.setItem('auth', '1');
         document.getElementById('pw-screen').style.display = 'none';
         document.getElementById('app').style.display = 'flex';
@@ -370,11 +402,38 @@ function login() {
 }
 function logout() { sessionStorage.removeItem('auth'); location.reload(); }
 
-// ══════════════════════════════════════════════
-//  앱 부팅
-// ══════════════════════════════════════════════
-let tasks = [];
-let members = [];
+// ── 데이터 ──
+let tasks = [], members = [];
+
+function loadData() {
+    tasks   = JSON.parse(localStorage.getItem('tasks')   || '[]');
+    members = JSON.parse(localStorage.getItem('members') || '[]');
+    pruneOldDone();
+}
+function saveTasks()   { localStorage.setItem('tasks',   JSON.stringify(tasks)); }
+function saveMembers() { localStorage.setItem('members', JSON.stringify(members)); }
+
+function pruneOldDone() {
+    const cut = Date.now() - 7 * 86400000;
+    const before = tasks.length;
+    tasks = tasks.filter(t => !(t.status === '완료' && t.doneAt && t.doneAt < cut));
+    if (tasks.length !== before) saveTasks();
+}
+
+// 태스크에서 담당자 자동 추출 + 수동 추가 목록 합산
+function getAllAssignees() {
+    const fromTasks = tasks.map(t => t.assignee).filter(a => a && a.trim());
+    return [...new Set([...members, ...fromTasks])];
+}
+
+function updateAssigneeList() {
+    const dl = document.getElementById('assignee-list');
+    if (!dl) return;
+    dl.innerHTML = getAllAssignees().map(m => `<option value="${esc(m)}">`).join('');
+}
+
+// ── 부팅 ──
+let activeTab = 'board';
 
 function bootApp() {
     CFG = loadCFG();
@@ -385,58 +444,36 @@ function bootApp() {
     document.getElementById('today-date').textContent =
         `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
     loadData();
-    initKakao();
-    checkDailyReminder();
-}
-
-function loadData() {
-    tasks   = JSON.parse(localStorage.getItem('tasks')   || '[]');
-    members = JSON.parse(localStorage.getItem('members') || '[]');
-    pruneOldDone();
-    renderBoard();
     updateAssigneeList();
-}
-function saveTasks()   { localStorage.setItem('tasks',   JSON.stringify(tasks));   }
-function saveMembers() { localStorage.setItem('members', JSON.stringify(members)); updateAssigneeList(); }
-
-function pruneOldDone() {
-    const cut = Date.now() - 7 * 86400000;
-    const before = tasks.length;
-    tasks = tasks.filter(t => !(t.status === '완료' && t.doneAt && t.doneAt < cut));
-    if (tasks.length !== before) saveTasks();
+    renderAll();
+    checkDailyReminder();
+    initKakao();
 }
 
 function initKakao() {
     if (CFG.kakaoKey && window.Kakao && !Kakao.isInitialized()) Kakao.init(CFG.kakaoKey);
 }
 
-function updateAssigneeList() {
-    const dl = document.getElementById('assignee-list');
-    if (dl) dl.innerHTML = members.map(m => `<option value="${esc(m)}">`).join('');
+function renderAll() {
+    renderBoard();
+    renderPersonSection();
+    if (activeTab === 'calendar') renderCalendarTab();
 }
 
-// ══════════════════════════════════════════════
-//  탭 전환
-// ══════════════════════════════════════════════
-let activeTab = 'board';
+// ── 탭 ──
 function switchTab(name) {
     activeTab = name;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.getElementById(`tab-${name}`).classList.add('active');
-    if (name === 'person')   renderPersonTab();
-    if (name === 'calendar') renderCalendar();
+    if (name === 'calendar') renderCalendarTab();
 }
 
-// ══════════════════════════════════════════════
-//  보드 렌더링
-// ══════════════════════════════════════════════
+// ── 칸반 보드 ──
 function renderBoard() {
     renderCol('작업 시작 안함', 'col-ns', 'cnt-ns');
     renderCol('작업중',         'col-ip', 'cnt-ip');
     renderCol('완료',           'col-dn', 'cnt-dn');
-    if (activeTab === 'person')   renderPersonTab();
-    if (activeTab === 'calendar') renderCalendar();
 }
 
 function renderCol(status, colId, cntId) {
@@ -456,7 +493,7 @@ function taskCard(t) {
     let expire = '';
     if (t.status === '완료' && t.doneAt) {
         const dl = 7 - Math.floor((Date.now() - t.doneAt) / 86400000);
-        if (dl <= 3) expire = `<div class="card-expire">⏱ ${dl}일 후 자동 삭제</div>`;
+        if (dl <= 3) expire = `<div class="card-expire">⏱ ${dl}일 후 삭제</div>`;
     }
     const btnMap = {
         '작업 시작 안함': [['작업중','▶ 시작'],['완료','✓ 완료']],
@@ -468,7 +505,7 @@ function taskCard(t) {
     ).join('');
     return `<div class="task-card${t.status==='완료'?' is-done':''}" onclick="openEdit('${t.id}')">
         <div class="card-title">${esc(t.title)}</div>
-        ${t.desc ? `<div class="card-sub">${esc(t.desc)}</div>` : ''}
+        ${t.desc     ? `<div class="card-sub">${esc(t.desc)}</div>` : ''}
         ${t.assignee ? `<div class="card-sub">👤 ${esc(t.assignee)}</div>` : ''}
         ${expire}
         <div class="status-btns">${btns}</div>
@@ -481,79 +518,106 @@ function quickStatus(id, s) {
     if (!t) return;
     t.status = s;
     t.doneAt = s === '완료' ? Date.now() : null;
-    saveTasks(); renderBoard(); showToast(`상태 변경: ${s}`);
+    saveTasks(); renderAll(); showToast(`상태 변경: ${s}`);
 }
 
-// ══════════════════════════════════════════════
-//  담당자별 탭
-// ══════════════════════════════════════════════
-function renderPersonTab() {
-    const wrap = document.getElementById('person-wrap');
+// ── 담당자 섹션 (보드 하단, 자동 인식) ──
+function renderPersonSection() {
+    const grid = document.getElementById('person-grid');
+    const allAssignees = getAllAssignees();
     const incomplete = tasks.filter(t => t.status !== '완료');
     const avatarColors = ['#4F46E5','#0EA5E9','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#F97316'];
 
-    let html = `<div class="person-add-row">
-        <input id="new-member-input" type="text" placeholder="팀원 이름 입력"
-               onkeydown="if(event.key==='Enter')addMember()">
-        <button class="btn btn-primary btn-sm" onclick="addMember()">+ 인원 추가</button>
-    </div><div class="person-grid">`;
+    updateAssigneeList();
 
-    if (!members.length) {
-        html += `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--muted)">
-            <div style="font-size:2rem;margin-bottom:8px">👥</div>
-            <p>인원을 추가하면 담당자별 업무 현황을 볼 수 있습니다</p>
+    if (!allAssignees.length) {
+        grid.innerHTML = `<div style="color:var(--muted);font-size:.85rem;padding:8px 0">
+            업무에 담당자를 입력하면 여기에 자동으로 정리됩니다.
         </div>`;
-    } else {
-        members.forEach(m => {
-            const mt = incomplete.filter(t => t.assignee === m);
-            const col = avatarColors[m.charCodeAt(0) % avatarColors.length];
-            html += `<div class="person-card">
-                <div class="person-card-head">
-                    <div class="p-avatar-wrap">
-                        <div class="p-avatar" style="background:${col}">${m.charAt(0)}</div>
-                        <div>
-                            <div class="p-name">${esc(m)}</div>
-                            <div class="p-sub">${mt.length}건 진행중</div>
-                        </div>
-                    </div>
-                    <button class="p-remove" onclick="removeMember('${esc(m)}')" title="제거">✕</button>
-                </div>
-                <div class="person-card-body">
-                    ${mt.length ? mt.map(t => `
-                        <div class="p-task-item" onclick="openEdit('${t.id}')">
-                            <span class="p-task-title">${esc(t.title)}</span>
-                            <span class="badge ${t.status==='작업중'?'badge-amber':'badge-red'}">${t.status}</span>
-                        </div>`).join('')
-                    : `<div class="p-empty">✅ 진행중인 업무 없음</div>`}
-                </div>
-            </div>`;
-        });
+        return;
     }
-    html += '</div>';
-    wrap.innerHTML = html;
+
+    grid.innerHTML = allAssignees.map(m => {
+        const mt = incomplete.filter(t => t.assignee === m);
+        const col = avatarColors[m.charCodeAt(0) % avatarColors.length];
+        return `<div class="person-card">
+            <div class="person-card-head">
+                <div class="p-avatar-wrap">
+                    <div class="p-avatar" style="background:${col}">${m.charAt(0)}</div>
+                    <div>
+                        <div class="p-name">${esc(m)}</div>
+                        <div class="p-sub">${mt.length}건 진행중</div>
+                    </div>
+                </div>
+                ${members.includes(m) ? `<button class="p-remove" onclick="removeMember('${esc(m)}')" title="제거">✕</button>` : ''}
+            </div>
+            <div class="person-card-body">
+                ${mt.length
+                    ? mt.map(t => `<div class="p-task-item" onclick="openEdit('${t.id}')">
+                        <span class="p-task-title">${esc(t.title)}</span>
+                        <span class="badge ${t.status==='작업중'?'badge-amber':'badge-red'}">${t.status}</span>
+                      </div>`).join('')
+                    : `<div class="p-empty">✅ 진행중인 업무 없음</div>`}
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function addMember() {
     const input = document.getElementById('new-member-input');
     const name = input.value.trim();
     if (!name) { showToast('이름을 입력하세요.'); return; }
-    if (members.includes(name)) { showToast('이미 등록된 인원입니다.'); return; }
+    if (getAllAssignees().includes(name)) { showToast('이미 있는 인원입니다.'); return; }
     members.push(name);
-    saveMembers(); renderPersonTab();
+    saveMembers(); renderPersonSection();
     input.value = ''; showToast(`${name} 추가됨`);
 }
 
 function removeMember(name) {
-    if (!confirm(`'${name}'을 인원에서 제거하시겠습니까?`)) return;
+    if (!confirm(`'${name}'을 인원 목록에서 제거할까요?`)) return;
     members = members.filter(m => m !== name);
-    saveMembers(); renderPersonTab(); showToast(`${name} 제거됨`);
+    saveMembers(); renderPersonSection(); showToast(`${name} 제거됨`);
 }
 
-// ══════════════════════════════════════════════
-//  완료 캘린더
-// ══════════════════════════════════════════════
-let calYear = new Date().getFullYear();
-let calMonth = new Date().getMonth();
+// ── 완료 캘린더 탭 ──
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+
+function renderCalendarTab() {
+    renderCalLeft();
+    renderCalendar();
+}
+
+function renderCalLeft() {
+    const ns = tasks.filter(t => t.status === '작업 시작 안함');
+    const ip = tasks.filter(t => t.status === '작업중');
+    const total = ns.length + ip.length;
+    document.getElementById('cal-left-count').textContent = total;
+
+    let html = '';
+    if (ip.length) {
+        html += `<div class="cal-status-group">
+            <div class="cal-status-label"><span class="dot dot-amber"></span>작업중 (${ip.length})</div>
+            ${ip.map(calTaskLi).join('')}
+        </div>`;
+    }
+    if (ns.length) {
+        html += `<div class="cal-status-group">
+            <div class="cal-status-label"><span class="dot dot-red"></span>작업 시작 안함 (${ns.length})</div>
+            ${ns.map(calTaskLi).join('')}
+        </div>`;
+    }
+    if (!total) {
+        html = `<div class="empty-state" style="padding-top:40px"><div class="ei">🎉</div><p>모든 업무 완료!</p></div>`;
+    }
+    document.getElementById('cal-left-body').innerHTML = html;
+}
+
+function calTaskLi(t) {
+    return `<div class="cal-task-li" onclick="openEdit('${t.id}')">
+        <div class="cal-task-li-title">${esc(t.title)}</div>
+        ${t.assignee ? `<div class="cal-task-li-sub">👤 ${esc(t.assignee)}</div>` : ''}
+    </div>`;
+}
 
 function calMove(dir) {
     calMonth += dir;
@@ -566,10 +630,10 @@ function renderCalendar() {
     const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
     document.getElementById('cal-month-label').textContent = `${calYear}년 ${months[calMonth]}`;
 
-    const firstDow  = new Date(calYear, calMonth, 1).getDay();   // 0=Sun
-    const offset    = (firstDow + 6) % 7;                        // Monday-start
-    const daysInMon = new Date(calYear, calMonth + 1, 0).getDate();
-    const today     = new Date();
+    // 일요일 시작: getDay() 0=일, offset 그대로 사용
+    const firstDow   = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+    const daysInMon  = new Date(calYear, calMonth + 1, 0).getDate();
+    const today      = new Date();
 
     const byDay = {};
     tasks.forEach(t => {
@@ -581,25 +645,30 @@ function renderCalendar() {
         byDay[day].push(t);
     });
 
-    const dows = ['월','화','수','목','금','토','일'];
-    let html = dows.map((d,i) => `<div class="cal-dow" style="${i>=5?'color:var(--red)':''}">${d}</div>`).join('');
+    // 요일 헤더: 일 월 화 수 목 금 토
+    const dows = ['일','월','화','수','목','금','토'];
+    let html = dows.map((d, i) =>
+        `<div class="cal-dow" style="${i===0?'color:var(--red)':i===6?'color:#3B82F6':''}">${d}</div>`
+    ).join('');
 
-    for (let i = 0; i < offset; i++) html += '<div class="cal-cell empty"></div>';
+    // 빈 셀 (일요일 시작이므로 offset = firstDow 그대로)
+    for (let i = 0; i < firstDow; i++) html += '<div class="cal-cell empty"></div>';
 
     for (let d = 1; d <= daysInMon; d++) {
         const isToday = today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===d;
         const dayTasks = byDay[d] || [];
         const hasDone  = dayTasks.length > 0;
-        const dow      = (offset + d - 1) % 7;
-        const isWeekend = dow >= 5;
+        // 요일: (firstDow + d - 1) % 7, 0=일, 6=토
+        const dow = (firstDow + d - 1) % 7;
+        const isSun = dow === 0, isSat = dow === 6;
 
         html += `<div class="cal-cell${isToday?' is-today':''}${hasDone?' has-done':''}"
-            ${hasDone ? `onclick="showDayModal(${d})"` : ''}>
-            <div class="cal-day-num" style="${isWeekend?'color:var(--red)':''}">${d}</div>
-            ${hasDone ? `<div class="cal-dots">
-                ${dayTasks.slice(0,3).map(t=>`<div class="cal-dot">${esc(t.title)}</div>`).join('')}
-                ${dayTasks.length>3 ? `<div class="cal-dot">+${dayTasks.length-3}건 더</div>` : ''}
-            </div>` : ''}
+            ${hasDone?`onclick="showDayModal(${d})"`:''}>
+            <div class="cal-day-num" style="${isSun?'color:var(--red)':isSat?'color:#3B82F6':''}">${d}</div>
+            ${hasDone?`<div class="cal-dots">
+                ${dayTasks.slice(0,3).map(t=>`<div class="cal-dot-item">${esc(t.title)}</div>`).join('')}
+                ${dayTasks.length>3?`<div class="cal-dot-item">+${dayTasks.length-3}건</div>`:''}
+            </div>`:''}
         </div>`;
     }
 
@@ -608,39 +677,33 @@ function renderCalendar() {
 
 function showDayModal(day) {
     const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-    const dayTasks = tasks.filter(t => {
+    const dt = tasks.filter(t => {
         if (t.status !== '완료' || !t.doneAt) return false;
         const d = new Date(t.doneAt);
         return d.getFullYear()===calYear && d.getMonth()===calMonth && d.getDate()===day;
     });
-    document.getElementById('day-modal-h').textContent = `${months[calMonth]} ${day}일 완료 업무 (${dayTasks.length}건)`;
-    document.getElementById('day-modal-list').innerHTML = dayTasks.map(t => `
+    document.getElementById('day-modal-h').textContent = `${months[calMonth]} ${day}일 완료 업무 (${dt.length}건)`;
+    document.getElementById('day-modal-list').innerHTML = dt.map(t => `
         <div class="reminder-item">
-            <div>
-                <div class="ri-title">${esc(t.title)}</div>
-                ${t.assignee ? `<div class="ri-sub">👤 ${esc(t.assignee)}</div>` : ''}
-            </div>
+            <div><div class="ri-title">${esc(t.title)}</div>${t.assignee?`<div class="ri-sub">👤 ${esc(t.assignee)}</div>`:''}</div>
             <span class="badge" style="background:#D1FAE5;color:#065F46">✓ 완료</span>
         </div>`).join('');
     document.getElementById('day-overlay').classList.add('show');
 }
 function closeDayModal() { document.getElementById('day-overlay').classList.remove('show'); }
 
-// ══════════════════════════════════════════════
-//  일별 리마인더 배너
-// ══════════════════════════════════════════════
+// ── 리마인더 배너 ──
 function checkDailyReminder() {
     const today = new Date().toDateString();
     const lastVisit = localStorage.getItem('last_visit');
     const dismissed = localStorage.getItem('banner_dismissed');
     localStorage.setItem('last_visit', today);
-    if (dismissed === today) return;
-    if (!lastVisit || lastVisit === today) return;
+    if (dismissed === today || !lastVisit || lastVisit === today) return;
     const incomplete = tasks.filter(t => t.status !== '완료');
     if (!incomplete.length) return;
     const ns = incomplete.filter(t => t.status === '작업 시작 안함').length;
     const ip = incomplete.filter(t => t.status === '작업중').length;
-    let parts = [];
+    const parts = [];
     if (ip) parts.push(`작업중 ${ip}건`);
     if (ns) parts.push(`미시작 ${ns}건`);
     document.getElementById('banner-text').textContent = ` — ${parts.join(' | ')}`;
@@ -651,31 +714,30 @@ function dismissBanner() {
     localStorage.setItem('banner_dismissed', new Date().toDateString());
 }
 
-// ══════════════════════════════════════════════
-//  현황 모달
-// ══════════════════════════════════════════════
+// ── 현황 모달 ──
 function openReminderModal() {
     const list = tasks.filter(t => t.status !== '완료');
-    const el = document.getElementById('remind-list');
-    el.innerHTML = list.length ? list.map(t => `
-        <div class="reminder-item">
-            <div>
-                <div class="ri-title">${esc(t.title)}</div>
-                ${t.assignee ? `<div class="ri-sub">👤 ${esc(t.assignee)}</div>` : ''}
-            </div>
+    document.getElementById('remind-list').innerHTML = list.length
+        ? list.map(t => `<div class="reminder-item">
+            <div><div class="ri-title">${esc(t.title)}</div>${t.assignee?`<div class="ri-sub">👤 ${esc(t.assignee)}</div>`:''}</div>
             <span class="badge ${t.status==='작업중'?'badge-amber':'badge-red'}">${t.status}</span>
-        </div>`).join('')
-    : `<div class="empty-state"><div class="ei">🎉</div><p>모든 업무가 완료되었습니다!</p></div>`;
+          </div>`).join('')
+        : `<div class="empty-state"><div class="ei">🎉</div><p>모든 업무가 완료되었습니다!</p></div>`;
     document.getElementById('remind-overlay').classList.add('show');
 }
 function closeReminderModal() { document.getElementById('remind-overlay').classList.remove('show'); }
 
-// ══════════════════════════════════════════════
-//  카카오톡 공유
-// ══════════════════════════════════════════════
+// ── 카카오 공유 ──
 function shareKakao() {
     const list = tasks.filter(t => t.status !== '완료');
-    const text = buildShareText(list);
+    const d = new Date();
+    let msg = `📋 [팀 업무 리마인더] ${d.getMonth()+1}월 ${d.getDate()}일\n\n`;
+    const ip = list.filter(t => t.status === '작업중');
+    const ns = list.filter(t => t.status === '작업 시작 안함');
+    if (ip.length) { msg += `🔶 작업중 (${ip.length}건)\n`; ip.forEach(t => { msg += `  • ${t.title}${t.assignee?` (${t.assignee})`:''}\n`; }); msg += '\n'; }
+    if (ns.length) { msg += `🔴 미시작 (${ns.length}건)\n`; ns.forEach(t => { msg += `  • ${t.title}${t.assignee?` (${t.assignee})`:''}\n`; }); }
+    if (!ip.length && !ns.length) msg += '✅ 미완료 업무 없음';
+    const text = msg.trim();
     if (window.Kakao && Kakao.isInitialized()) {
         Kakao.Share.sendDefault({ objectType: 'text', text, link: { mobileWebUrl: location.href, webUrl: location.href } });
     } else {
@@ -684,27 +746,13 @@ function shareKakao() {
             .catch(() => alert(text));
     }
 }
-function buildShareText(list) {
-    const d = new Date();
-    let msg = `📋 [팀 업무 리마인더] ${d.getMonth()+1}월 ${d.getDate()}일\n\n`;
-    const ip = list.filter(t => t.status === '작업중');
-    const ns = list.filter(t => t.status === '작업 시작 안함');
-    if (ip.length) { msg += `🔶 작업중 (${ip.length}건)\n`; ip.forEach(t => { msg += `  • ${t.title}${t.assignee?` (${t.assignee})`:''}\n`; }); msg += '\n'; }
-    if (ns.length) { msg += `🔴 미시작 (${ns.length}건)\n`; ns.forEach(t => { msg += `  • ${t.title}${t.assignee?` (${t.assignee})`:''}\n`; }); }
-    if (!ip.length && !ns.length) msg += '✅ 미완료 업무 없음';
-    return msg.trim();
-}
 
-// ══════════════════════════════════════════════
-//  업무 모달
-// ══════════════════════════════════════════════
+// ── 업무 모달 ──
 let editId = null;
 function openAddTask() {
     editId = null;
     document.getElementById('task-modal-h').textContent = '업무 추가';
-    document.getElementById('f-title').value = '';
-    document.getElementById('f-desc').value = '';
-    document.getElementById('f-assignee').value = '';
+    ['f-title','f-desc','f-assignee'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-status').value = '작업 시작 안함';
     document.getElementById('del-btn').style.display = 'none';
     document.getElementById('task-overlay').classList.add('show');
@@ -715,10 +763,10 @@ function openEdit(id) {
     if (!t) return;
     editId = id;
     document.getElementById('task-modal-h').textContent = '업무 수정';
-    document.getElementById('f-title').value = t.title;
-    document.getElementById('f-desc').value = t.desc || '';
+    document.getElementById('f-title').value    = t.title;
+    document.getElementById('f-desc').value     = t.desc || '';
     document.getElementById('f-assignee').value = t.assignee || '';
-    document.getElementById('f-status').value = t.status;
+    document.getElementById('f-status').value   = t.status;
     document.getElementById('del-btn').style.display = 'inline-block';
     document.getElementById('task-overlay').classList.add('show');
     document.getElementById('f-title').focus();
@@ -743,18 +791,15 @@ function saveTask() {
         tasks.unshift({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), title, desc, assignee, status, createdAt: Date.now(), doneAt: status==='완료'?Date.now():null });
         showToast('업무가 추가되었습니다.');
     }
-    saveTasks(); renderBoard(); closeTaskModal();
+    saveTasks(); renderAll(); closeTaskModal();
 }
-
 function deleteEditing() {
     if (!editId || !confirm('이 업무를 삭제하시겠습니까?')) return;
     tasks = tasks.filter(t => t.id !== editId);
-    saveTasks(); renderBoard(); showToast('삭제되었습니다.'); closeTaskModal();
+    saveTasks(); renderAll(); showToast('삭제되었습니다.'); closeTaskModal();
 }
 
-// ══════════════════════════════════════════════
-//  설정 모달
-// ══════════════════════════════════════════════
+// ── 설정 ──
 function toggleSettings() {
     const m = document.getElementById('settings-menu');
     m.classList.toggle('open');
@@ -780,9 +825,7 @@ function saveCfg() {
     initKakao(); closeCfgModal(); showToast('설정이 저장되었습니다.');
 }
 
-// ══════════════════════════════════════════════
-//  유틸
-// ══════════════════════════════════════════════
+// ── 유틸 ──
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
 let _tt;
 function showToast(msg, ms=2500) {
@@ -791,9 +834,7 @@ function showToast(msg, ms=2500) {
     clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), ms);
 }
 
-// ══════════════════════════════════════════════
-//  진입
-// ══════════════════════════════════════════════
+// ── 진입 ──
 window.addEventListener('load', () => {
     if (sessionStorage.getItem('auth') === '1') {
         document.getElementById('pw-screen').style.display = 'none';
