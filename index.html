@@ -94,13 +94,16 @@
         .routine-head-title { font-weight: 700; font-size: .88rem; }
         .routine-count { background: #F1F5F9; color: var(--muted); padding: 2px 9px; border-radius: 20px; font-size: .76rem; font-weight: 700; }
         .routine-body { padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; min-height: 46px; align-items: flex-start; }
-        .routine-item { display: inline-flex; align-items: center; gap: 6px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; transition: all .15s; }
+        .routine-item { display: inline-flex; align-items: center; gap: 6px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; transition: all .15s; }
         .routine-item:hover { border-color: var(--primary); }
         .routine-item.done { background: #F0FDF4; border-color: #86EFAC; }
-        .routine-check { width: 15px; height: 15px; border-radius: 3px; border: 2px solid #CBD5E1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .65rem; transition: all .15s; color: transparent; }
+        .routine-check { width: 15px; height: 15px; border-radius: 3px; border: 2px solid #CBD5E1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .65rem; transition: all .15s; color: transparent; cursor: pointer; }
         .routine-item.done .routine-check { background: var(--green); border-color: var(--green); color: #fff; }
-        .routine-title { font-size: .82rem; font-weight: 500; }
+        .routine-title { font-size: .82rem; font-weight: 500; cursor: pointer; }
+        .routine-title:hover { color: var(--primary); text-decoration: underline; }
         .routine-assignee { font-size: .7rem; color: var(--muted); }
+        .routine-edit-btn { background: none; border: none; font-size: .72rem; color: #CBD5E1; cursor: pointer; padding: 2px 4px; border-radius: 4px; flex-shrink: 0; transition: color .15s; }
+        .routine-edit-btn:hover { color: var(--primary); }
         .routine-empty { color: var(--muted); font-size: .82rem; padding: 4px 2px; }
 
         /* ── 보드 탭 ── */
@@ -704,12 +707,13 @@ function renderRoutineSection() {
     }
     body.innerHTML = routines.map(t => {
         const done = t.status === '완료';
-        return `<div class="routine-item${done ? ' done' : ''}" onclick="toggleRoutine('${t.id}')">
-            <div class="routine-check">${done ? '✓' : ''}</div>
-            <div>
+        return `<div class="routine-item${done ? ' done' : ''}">
+            <div class="routine-check" onclick="toggleRoutine('${t.id}')" title="완료 토글">${done ? '✓' : ''}</div>
+            <div onclick="openEdit('${t.id}')" style="cursor:pointer">
                 <div class="routine-title">${esc(t.title)}</div>
                 ${t.assignee ? `<div class="routine-assignee">👤 ${esc(t.assignee)}</div>` : ''}
             </div>
+            <button class="routine-edit-btn" onclick="openEdit('${t.id}')" title="수정">✎</button>
         </div>`;
     }).join('');
 }
