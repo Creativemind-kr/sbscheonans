@@ -883,14 +883,38 @@ function closeReminderModal() { document.getElementById('remind-overlay').classL
 
 // ── 카카오 공유 ──
 function shareKakao() {
-    const list = tasks.filter(t => t.status !== '완료');
     const d = new Date();
     let msg = `📋 [팀 업무 리마인더] ${d.getMonth()+1}월 ${d.getDate()}일\n\n`;
-    const ip = list.filter(t => t.status === '작업중');
-    const ns = list.filter(t => t.status === '작업 시작 안함');
-    if (ip.length) { msg += `🔶 작업중 (${ip.length}건)\n`; ip.forEach(t => { msg += `  • ${t.title}${t.assignee?` (${t.assignee})`:''}\n`; }); msg += '\n'; }
-    if (ns.length) { msg += `🔴 미시작 (${ns.length}건)\n`; ns.forEach(t => { msg += `  • ${t.title}${t.assignee?` (${t.assignee})`:''}\n`; }); }
-    if (!ip.length && !ns.length) msg += '✅ 미완료 업무 없음';
+
+    function byAssignee(list) {
+        const map = {};
+        list.forEach(t => {
+            const key = (t.assignee && t.assignee.trim()) ? t.assignee.trim() : '담당자 없음';
+            if (!map[key]) map[key] = [];
+            map[key].push(t);
+        });
+        return map;
+    }
+
+    function formatSection(icon, label, list) {
+        let s = `${icon} ${label} (${list.length}건)\n`;
+        if (!list.length) return s;
+        const groups = byAssignee(list);
+        Object.entries(groups).forEach(([name, items]) => {
+            s += `  • ${name} (${items.length}건)\n`;
+            items.forEach(t => { s += `    - ${t.title}\n`; });
+        });
+        return s;
+    }
+
+    const ip = tasks.filter(t => t.status === '작업중');
+    const ns = tasks.filter(t => t.status === '작업 시작 안함');
+    const dn = tasks.filter(t => t.status === '완료');
+
+    msg += formatSection('🔶', '작업중', ip) + '\n';
+    msg += formatSection('🔴', '미시작', ns) + '\n';
+    msg += formatSection('✅', '완료', dn);
+
     const text = msg.trim();
     if (window.Kakao && Kakao.isInitialized()) {
         Kakao.Share.sendDefault({ objectType: 'text', text, link: { mobileWebUrl: location.href, webUrl: location.href } });
