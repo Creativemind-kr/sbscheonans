@@ -50,9 +50,17 @@
         .banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
         /* 마감 임박 배너 */
-        .deadline-banner { display: none; background: #FEF2F2; border-bottom: 2px solid var(--red); padding: 10px 24px; align-items: center; gap: 12px; }
+        .deadline-banner { display: none; background: #FEF2F2; border-bottom: 2px solid var(--red); padding: 10px 24px; flex-direction: column; gap: 8px; }
         .deadline-banner.show { display: flex; }
-        .deadline-banner .banner-text { color: #991B1B; }
+        .deadline-banner-top { display: flex; align-items: center; gap: 12px; }
+        .deadline-banner .banner-text { color: #991B1B; flex: 1; }
+        .deadline-groups { display: flex; flex-wrap: wrap; gap: 10px; padding-left: 24px; }
+        .deadline-group { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .deadline-group-name { font-size: .78rem; font-weight: 700; color: #991B1B; white-space: nowrap; }
+        .deadline-task-chip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 7px; border-radius: 4px; font-size: .74rem; font-weight: 500; }
+        .deadline-task-chip.over     { background: #FEE2E2; color: #DC2626; }
+        .deadline-task-chip.today    { background: #FEE2E2; color: #DC2626; }
+        .deadline-task-chip.tomorrow { background: #FEF3C7; color: #D97706; }
 
         /* 버튼 */
         .btn { padding: 8px 14px; border-radius: 8px; border: none; font-size: .85rem; font-weight: 500; cursor: pointer; transition: all .15s; white-space: nowrap; }
@@ -320,11 +328,14 @@
 
     <!-- 마감 임박 배너 -->
     <div class="deadline-banner" id="deadline-banner">
-        <span>🚨</span>
-        <div class="banner-text" id="deadline-banner-text"></div>
-        <div class="banner-actions">
-            <button class="btn btn-secondary btn-sm" onclick="dismissDeadlineBanner()">닫기</button>
+        <div class="deadline-banner-top">
+            <span>🚨</span>
+            <div class="banner-text" id="deadline-banner-text"></div>
+            <div class="banner-actions">
+                <button class="btn btn-secondary btn-sm" onclick="dismissDeadlineBanner()">닫기</button>
+            </div>
         </div>
+        <div class="deadline-groups" id="deadline-groups"></div>
     </div>
 
     <!-- 탭: 보드 -->
@@ -737,10 +748,15 @@ function checkDeadlineBanner() {
     const now = new Date(); now.setHours(0, 0, 0, 0);
     const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
 
+    const overDue = tasks.filter(t => {
+        if (t.status === '완료' || !t.dueDate || t.isRoutine) return false;
+        const due = new Date(t.dueDate); due.setHours(0, 0, 0, 0);
+        return due.getTime() < now.getTime();
+    });
     const todayDue = tasks.filter(t => {
         if (t.status === '완료' || !t.dueDate || t.isRoutine) return false;
         const due = new Date(t.dueDate); due.setHours(0, 0, 0, 0);
-        return due.getTime() <= now.getTime();
+        return due.getTime() === now.getTime();
     });
     const tomorrowDue = tasks.filter(t => {
         if (t.status === '완료' || !t.dueDate || t.isRoutine) return false;
@@ -748,16 +764,33 @@ function checkDeadlineBanner() {
         return due.getTime() === tomorrow.getTime();
     });
 
-    if (!todayDue.length && !tomorrowDue.length) return;
+    const all = [...overDue, ...todayDue, ...tomorrowDue];
+    if (!all.length) return;
 
     const parts = [];
-    if (todayDue.length)    parts.push(`오늘 이내 마감 ${todayDue.length}건`);
+    if (overDue.length)     parts.push(`마감 초과 ${overDue.length}건`);
+    if (todayDue.length)    parts.push(`오늘 마감 ${todayDue.length}건`);
     if (tomorrowDue.length) parts.push(`내일 마감 ${tomorrowDue.length}건`);
-    const all = [...todayDue, ...tomorrowDue];
-    const preview = all.slice(0, 3).map(t => esc(t.title)).join(', ');
-    const extra = all.length > 3 ? '...' : '';
     document.getElementById('deadline-banner-text').innerHTML =
-        `<strong>마감 임박!</strong> ${parts.join(' | ')} — ${preview}${extra}`;
+        `<strong>마감 임박!</strong> ${parts.join(' | ')}`;
+
+    // 담당자별 그룹핑
+    const byAssignee = {};
+    all.forEach(t => {
+        const key = (t.assignee && t.assignee.trim()) ? t.assignee.trim() : '담당자 없음';
+        if (!byAssignee[key]) byAssignee[key] = [];
+        byAssignee[key].push(t);
+    });
+    const groupsHtml = Object.entries(byAssignee).map(([name, items]) => {
+        const chips = items.map(t => {
+            const due = new Date(t.dueDate); due.setHours(0, 0, 0, 0);
+            const cls   = due < now ? 'over' : due.getTime() === now.getTime() ? 'today' : 'tomorrow';
+            const label = due < now ? '초과' : due.getTime() === now.getTime() ? '오늘' : '내일';
+            return `<span class="deadline-task-chip ${cls}">${esc(t.title)} · ${label}</span>`;
+        }).join('');
+        return `<div class="deadline-group"><span class="deadline-group-name">👤 ${esc(name)}</span>${chips}</div>`;
+    }).join('');
+    document.getElementById('deadline-groups').innerHTML = groupsHtml;
     document.getElementById('deadline-banner').classList.add('show');
 }
 function dismissDeadlineBanner() {
