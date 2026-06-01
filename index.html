@@ -173,6 +173,22 @@
         .done-item-title { font-weight: 600; font-size: .9rem; margin-bottom: 2px; }
         .done-item-sub { font-size: .78rem; color: var(--muted); margin-top: 2px; }
 
+        /* ── 참고 링크 섹션 ── */
+        .links-section { margin: 0 24px 28px; }
+        .links-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
+        .links-section-title { font-size: .95rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+        .links-grid { display: flex; flex-direction: column; gap: 7px; }
+        .link-item { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 10px 14px; transition: border-color .2s, box-shadow .2s; }
+        .link-item:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(79,70,229,.08); }
+        .link-info { flex: 1; min-width: 0; }
+        .link-title { font-weight: 600; font-size: .88rem; }
+        .link-url { font-size: .73rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .link-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+        .link-open { padding: 5px 11px; border-radius: 7px; border: 1px solid var(--border); background: #fff; font-size: .8rem; cursor: pointer; color: var(--primary); font-weight: 600; transition: background .15s; }
+        .link-open:hover { background: #EEF2FF; border-color: var(--primary); }
+        .link-del { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .85rem; padding: 4px; border-radius: 4px; transition: color .15s; line-height: 1; }
+        .link-del:hover { color: var(--red); }
+
         /* 설정 드롭다운 */
         .settings-menu { position: absolute; right: 24px; top: 56px; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12); overflow: hidden; z-index: 30; min-width: 150px; display: none; }
         .settings-menu.open { display: block; }
@@ -289,6 +305,14 @@
                 </div>
             </div>
             <div class="person-grid" id="person-grid"></div>
+        </div>
+        <!-- 참고 링크 섹션 -->
+        <div class="links-section">
+            <div class="links-section-head">
+                <div class="links-section-title">🔗 참고 링크</div>
+                <button class="btn btn-secondary btn-sm" onclick="openAddLink()">+ 링크 추가</button>
+            </div>
+            <div class="links-grid" id="links-grid"></div>
         </div>
     </div>
 
@@ -415,6 +439,25 @@
     </div>
 </div>
 
+<!-- 링크 추가 모달 -->
+<div class="overlay" id="link-overlay" onclick="if(event.target===this)closeLinkModal()">
+    <div class="modal">
+        <h2>🔗 링크 추가</h2>
+        <div class="form-row">
+            <label>링크 제목 *</label>
+            <input id="l-title" type="text" placeholder="예: 구글 스프레드시트">
+        </div>
+        <div class="form-row">
+            <label>URL *</label>
+            <input id="l-url" type="text" placeholder="https://...">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeLinkModal()">취소</button>
+            <button class="btn btn-primary" onclick="saveLink()">추가</button>
+        </div>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -444,14 +487,16 @@ function login() {
 function logout() { sessionStorage.removeItem('auth'); location.reload(); }
 
 // ── 데이터 ──
-let tasks = [], members = [];
+let tasks = [], members = [], links = [];
 
 function loadData() {
     tasks   = JSON.parse(localStorage.getItem('tasks')   || '[]');
     members = JSON.parse(localStorage.getItem('members') || '[]');
+    links   = JSON.parse(localStorage.getItem('__links') || '[]');
 }
 function saveTasks()   { localStorage.setItem('tasks',   JSON.stringify(tasks)); }
 function saveMembers() { localStorage.setItem('members', JSON.stringify(members)); }
+function saveLinks()   { localStorage.setItem('__links', JSON.stringify(links)); }
 
 // 태스크에서 담당자 자동 추출 + 수동 추가 목록 합산
 function getAllAssignees() {
@@ -490,6 +535,7 @@ function initKakao() {
 function renderAll() {
     renderBoard();
     renderPersonSection();
+    renderLinksSection();
     if (activeTab === 'done')     renderDoneTab();
     if (activeTab === 'calendar') renderCalendarTab();
 }
@@ -905,6 +951,56 @@ function deleteEditing() {
     if (!editId || !confirm('이 업무를 삭제하시겠습니까?')) return;
     tasks = tasks.filter(t => t.id !== editId);
     saveTasks(); renderAll(); showToast('삭제되었습니다.'); closeTaskModal();
+}
+
+// ── 참고 링크 ──
+function renderLinksSection() {
+    const grid = document.getElementById('links-grid');
+    if (!grid) return;
+    if (!links.length) {
+        grid.innerHTML = `<div style="color:var(--muted);font-size:.85rem;padding:6px 0">참고할 링크를 추가해보세요.</div>`;
+        return;
+    }
+    grid.innerHTML = links.map(l => `
+        <div class="link-item">
+            <div class="link-info">
+                <div class="link-title">${esc(l.title)}</div>
+                <div class="link-url">${esc(l.url)}</div>
+            </div>
+            <div class="link-actions">
+                <button class="link-open" onclick="openLink('${esc(l.id)}')">열기</button>
+                <button class="link-del" onclick="removeLink('${esc(l.id)}')" title="삭제">✕</button>
+            </div>
+        </div>`).join('');
+}
+
+function openLink(id) {
+    const l = links.find(x => x.id === id);
+    if (l) window.open(l.url, '_blank', 'noopener');
+}
+
+function openAddLink() {
+    document.getElementById('l-title').value = '';
+    document.getElementById('l-url').value = '';
+    document.getElementById('link-overlay').classList.add('show');
+    document.getElementById('l-title').focus();
+}
+function closeLinkModal() { document.getElementById('link-overlay').classList.remove('show'); }
+
+function saveLink() {
+    const title = document.getElementById('l-title').value.trim();
+    let url = document.getElementById('l-url').value.trim();
+    if (!title) { showToast('링크 제목을 입력하세요.'); return; }
+    if (!url)   { showToast('URL을 입력하세요.'); return; }
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    links.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title, url });
+    saveLinks(); renderLinksSection(); closeLinkModal(); showToast(`${title} 추가됨`);
+}
+
+function removeLink(id) {
+    if (!confirm('이 링크를 삭제할까요?')) return;
+    links = links.filter(l => l.id !== id);
+    saveLinks(); renderLinksSection(); showToast('링크가 삭제되었습니다.');
 }
 
 // ── 설정 ──
