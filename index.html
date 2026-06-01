@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>팀 업무 리마인더</title>
     <!-- <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script> -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
@@ -464,13 +466,19 @@
 // ── 비밀번호 (소스코드에서만 관리) ──
 const SOURCE_PASSWORD = '9988';
 
+// ── Firebase ──
+firebase.initializeApp({
+    apiKey: "AIzaSyBcrvuu9cMpCxdvsR_PqrktHWXK5e6dpFc",
+    authDomain: "sbscheonans.firebaseapp.com",
+    projectId: "sbscheonans",
+    storageBucket: "sbscheonans.firebasestorage.app",
+    messagingSenderId: "901448586994",
+    appId: "1:901448586994:web:725325cb2ab3b3b870e26b"
+});
+const db = firebase.firestore();
+
 // ── 설정 ──
-function loadCFG() {
-    const s = JSON.parse(localStorage.getItem('__cfg') || '{}');
-    return { siteTitle: s.siteTitle || '팀 업무 리마인더', kakaoKey: s.kakaoKey || '' };
-}
-let CFG = loadCFG();
-function saveCFGStorage() { localStorage.setItem('__cfg', JSON.stringify({ siteTitle: CFG.siteTitle, kakaoKey: CFG.kakaoKey })); }
+let CFG = { siteTitle: '팀 업무 리마인더', kakaoKey: '' };
 
 // ── 인증 ──
 function login() {
@@ -487,16 +495,33 @@ function login() {
 function logout() { sessionStorage.removeItem('auth'); location.reload(); }
 
 // ── 데이터 ──
-let tasks = [], members = [], links = [];
+let tasks = [], members = [], links = [], dataLoaded = false;
 
 function loadData() {
-    tasks   = JSON.parse(localStorage.getItem('tasks')   || '[]');
-    members = JSON.parse(localStorage.getItem('members') || '[]');
-    links   = JSON.parse(localStorage.getItem('__links') || '[]');
+    db.collection('tasks').onSnapshot(snapshot => {
+        tasks = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        if (!dataLoaded) { dataLoaded = true; checkDailyReminder(); }
+        updateAssigneeList();
+        renderAll();
+    });
+    db.doc('config/app').onSnapshot(doc => {
+        const data = doc.data() || {};
+        members = data.members || [];
+        links   = data.links   || [];
+        if (data.siteTitle) {
+            CFG.siteTitle = data.siteTitle;
+            document.title = CFG.siteTitle;
+            const el = document.getElementById('site-title');
+            if (el) el.textContent = CFG.siteTitle;
+        }
+        if (data.kakaoKey !== undefined) CFG.kakaoKey = data.kakaoKey;
+        initKakao();
+        updateAssigneeList();
+        renderAll();
+    });
 }
-function saveTasks()   { localStorage.setItem('tasks',   JSON.stringify(tasks)); }
-function saveMembers() { localStorage.setItem('members', JSON.stringify(members)); }
-function saveLinks()   { localStorage.setItem('__links', JSON.stringify(links)); }
+function saveMembers() { db.doc('config/app').set({ members }, { merge: true }); }
+function saveLinks()   { db.doc('config/app').set({ links },   { merge: true }); }
 
 // 태스크에서 담당자 자동 추출 + 수동 추가 목록 합산
 function getAllAssignees() {
@@ -514,18 +539,11 @@ function updateAssigneeList() {
 let activeTab = 'board';
 
 function bootApp() {
-    CFG = loadCFG();
-    document.title = CFG.siteTitle;
-    document.getElementById('site-title').textContent = CFG.siteTitle;
     const now = new Date();
     const days = ['일','월','화','수','목','금','토'];
     document.getElementById('today-date').textContent =
         `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${days[now.getDay()]})`;
     loadData();
-    updateAssigneeList();
-    renderAll();
-    checkDailyReminder();
-    initKakao();
 }
 
 function initKakao() {
@@ -589,11 +607,9 @@ function taskCard(t) {
 }
 
 function quickStatus(id, s) {
-    const t = tasks.find(x => x.id === id);
-    if (!t) return;
-    t.status = s;
-    t.doneAt = s === '완료' ? Date.now() : null;
-    saveTasks(); renderAll(); showToast(`상태 변경: ${s}`);
+    if (!tasks.find(x => x.id === id)) return;
+    db.collection('tasks').doc(id).update({ status: s, doneAt: s === '완료' ? Date.now() : null });
+    showToast(`상태 변경: ${s}`);
 }
 
 // ── 담당자 섹션 (보드 하단, 자동 인식) ──
@@ -644,14 +660,14 @@ function addMember() {
     if (!name) { showToast('이름을 입력하세요.'); return; }
     if (getAllAssignees().includes(name)) { showToast('이미 있는 인원입니다.'); return; }
     members.push(name);
-    saveMembers(); renderPersonSection();
+    saveMembers();
     input.value = ''; showToast(`${name} 추가됨`);
 }
 
 function removeMember(name) {
     if (!confirm(`'${name}'을 인원 목록에서 제거할까요?`)) return;
     members = members.filter(m => m !== name);
-    saveMembers(); renderPersonSection(); showToast(`${name} 제거됨`);
+    saveMembers(); showToast(`${name} 제거됨`);
 }
 
 // ── 완료 업무 탭 ──
@@ -960,21 +976,23 @@ function saveTask() {
     if (editId) {
         const t = tasks.find(x => x.id === editId);
         if (t) {
-            if (t.status !== '완료' && status === '완료') t.doneAt = Date.now();
-            if (t.status === '완료' && status !== '완료') t.doneAt = null;
-            Object.assign(t, { title, desc, assignee, status });
+            const updates = { title, desc, assignee, status };
+            if (t.status !== '완료' && status === '완료') updates.doneAt = Date.now();
+            if (t.status === '완료' && status !== '완료') updates.doneAt = null;
+            db.collection('tasks').doc(editId).update(updates);
         }
         showToast('업무가 수정되었습니다.');
     } else {
-        tasks.unshift({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), title, desc, assignee, status, createdAt: Date.now(), doneAt: status==='완료'?Date.now():null });
+        const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        db.collection('tasks').doc(id).set({ id, title, desc, assignee, status, createdAt: Date.now(), doneAt: status === '완료' ? Date.now() : null });
         showToast('업무가 추가되었습니다.');
     }
-    saveTasks(); renderAll(); closeTaskModal();
+    closeTaskModal();
 }
 function deleteEditing() {
     if (!editId || !confirm('이 업무를 삭제하시겠습니까?')) return;
-    tasks = tasks.filter(t => t.id !== editId);
-    saveTasks(); renderAll(); showToast('삭제되었습니다.'); closeTaskModal();
+    db.collection('tasks').doc(editId).delete();
+    showToast('삭제되었습니다.'); closeTaskModal();
 }
 
 // ── 참고 링크 ──
@@ -1018,13 +1036,13 @@ function saveLink() {
     if (!url)   { showToast('URL을 입력하세요.'); return; }
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
     links.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title, url });
-    saveLinks(); renderLinksSection(); closeLinkModal(); showToast(`${title} 추가됨`);
+    saveLinks(); closeLinkModal(); showToast(`${title} 추가됨`);
 }
 
 function removeLink(id) {
     if (!confirm('이 링크를 삭제할까요?')) return;
     links = links.filter(l => l.id !== id);
-    saveLinks(); renderLinksSection(); showToast('링크가 삭제되었습니다.');
+    saveLinks(); showToast('링크가 삭제되었습니다.');
 }
 
 // ── 설정 ──
@@ -1047,7 +1065,7 @@ function closeCfgModal() { document.getElementById('cfg-overlay').classList.remo
 function saveCfg() {
     CFG.siteTitle = document.getElementById('cfg-title').value.trim() || CFG.siteTitle;
     CFG.kakaoKey  = document.getElementById('cfg-kakao').value.trim();
-    saveCFGStorage();
+    db.doc('config/app').set({ siteTitle: CFG.siteTitle, kakaoKey: CFG.kakaoKey }, { merge: true });
     document.title = CFG.siteTitle;
     document.getElementById('site-title').textContent = CFG.siteTitle;
     initKakao(); closeCfgModal(); showToast('설정이 저장되었습니다.');
