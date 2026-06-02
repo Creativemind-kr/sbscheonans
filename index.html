@@ -286,16 +286,19 @@
         .attach-label { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-size: .8rem; font-weight: 500; cursor: pointer; transition: all .15s; }
         .attach-label:hover { background: #EEF2FF; border-color: var(--primary); color: var(--primary); }
         .upload-status { font-size: .78rem; color: var(--muted); }
-        .attach-list { display: flex; flex-direction: column; gap: 5px; }
+        .attach-list { display: flex; flex-direction: column; gap: 8px; }
         .attach-item { display: flex; align-items: center; gap: 8px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px; }
-        .attach-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; flex-shrink: 0; cursor: pointer; }
+        .attach-img-card { flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; }
+        .attach-img-preview { width: 100%; max-height: 240px; object-fit: contain; background: #1E293B; border-radius: 6px 6px 0 0; display: block; cursor: pointer; }
+        .attach-item-foot { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; gap: 6px; }
         .attach-icon { width: 36px; height: 36px; background: #EEF2FF; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
         .attach-info { flex: 1; min-width: 0; }
         .attach-name { font-size: .82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .attach-name a { color: inherit; text-decoration: none; }
-        .attach-name a:hover { color: var(--primary); text-decoration: underline; }
         .attach-size { font-size: .7rem; color: var(--muted); margin-top: 1px; }
-        .attach-del { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .85rem; padding: 3px; border-radius: 4px; flex-shrink: 0; transition: color .15s; line-height: 1; }
+        .attach-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .attach-dl { background: none; border: none; cursor: pointer; color: #94A3B8; font-size: .85rem; padding: 3px 5px; border-radius: 4px; transition: color .15s; line-height: 1; }
+        .attach-dl:hover { color: var(--primary); }
+        .attach-del { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .85rem; padding: 3px 5px; border-radius: 4px; flex-shrink: 0; transition: color .15s; line-height: 1; }
         .attach-del:hover { color: var(--red); }
 
         /* ── 댓글 ── */
@@ -1575,18 +1578,47 @@ function renderAttachList() {
     if (!currentAttachments.length) { el.innerHTML = ''; return; }
     el.innerHTML = currentAttachments.map(a => {
         const isImg = a.type && a.type.startsWith('image/');
-        const media = isImg
-            ? `<img class="attach-thumb" src="${a.url}" alt="${esc(a.name)}" onclick="window.open('${a.url}','_blank','noopener')">`
-            : `<div class="attach-icon">${fileTypeIcon(a.type)}</div>`;
+        if (isImg) {
+            return `<div class="attach-item attach-img-card">
+                <img class="attach-img-preview" src="${a.url}" alt="${esc(a.name)}" onclick="downloadFile('${a.url}','${esc(a.name)}')" title="클릭하여 저장">
+                <div class="attach-item-foot">
+                    <div class="attach-info">
+                        <div class="attach-name">${esc(a.name)}</div>
+                        <div class="attach-size">${formatFileSize(a.size)}</div>
+                    </div>
+                    <div class="attach-actions">
+                        <button class="attach-dl" onclick="downloadFile('${a.url}','${esc(a.name)}')" title="저장">⬇</button>
+                        <button class="attach-del" onclick="deleteAttachment('${a.id}')" title="삭제">✕</button>
+                    </div>
+                </div>
+            </div>`;
+        }
         return `<div class="attach-item">
-            ${media}
+            <div class="attach-icon">${fileTypeIcon(a.type)}</div>
             <div class="attach-info">
-                <div class="attach-name"><a href="${a.url}" target="_blank" rel="noopener">${esc(a.name)}</a></div>
+                <div class="attach-name">${esc(a.name)}</div>
                 <div class="attach-size">${formatFileSize(a.size)}</div>
             </div>
-            <button class="attach-del" onclick="deleteAttachment('${a.id}')" title="삭제">✕</button>
+            <div class="attach-actions">
+                <button class="attach-dl" onclick="downloadFile('${a.url}','${esc(a.name)}')" title="저장">⬇</button>
+                <button class="attach-del" onclick="deleteAttachment('${a.id}')" title="삭제">✕</button>
+            </div>
         </div>`;
     }).join('');
+}
+
+async function downloadFile(url, name) {
+    try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    } catch(e) {
+        window.open(url, '_blank', 'noopener');
+    }
 }
 
 function fileTypeIcon(type) {
