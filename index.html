@@ -1113,6 +1113,20 @@ function routineDrop(e) {
 }
 
 // ── 담당자 섹션 ──
+function pTaskDue(dueDate) {
+    if (!dueDate) return '';
+    const now = new Date(); now.setHours(0,0,0,0);
+    const due = new Date(dueDate); due.setHours(0,0,0,0);
+    const diff = Math.round((due - now) / 86400000);
+    let color, label;
+    if (diff < 0)        { color = 'var(--red)';   label = `D+${Math.abs(diff)} 초과`; }
+    else if (diff === 0) { color = 'var(--red)';   label = `D-Day (${due.getMonth()+1}/${due.getDate()})`; }
+    else if (diff <= 3)  { color = 'var(--red)';   label = `D-${diff} (${due.getMonth()+1}/${due.getDate()})`; }
+    else if (diff <= 7)  { color = 'var(--amber)'; label = `D-${diff} (${due.getMonth()+1}/${due.getDate()})`; }
+    else                 { color = '#94A3B8';       label = `${due.getMonth()+1}/${due.getDate()} 마감`; }
+    return `<span style="font-size:.7rem;color:${color};display:block;margin-top:2px">📅 ${label}</span>`;
+}
+
 function renderPersonSection() {
     const grid = document.getElementById('person-grid');
     const allAssignees = getAllAssignees();
@@ -1124,7 +1138,12 @@ function renderPersonSection() {
         return;
     }
     grid.innerHTML = allAssignees.map(m => {
-        const mt  = incomplete.filter(t => t.assignee === m);
+        const mt = incomplete.filter(t => t.assignee === m);
+        mt.sort((a, b) => {
+            const aD = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+            const bD = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+            return aD - bD;
+        });
         const col = avatarColors[m.charCodeAt(0) % avatarColors.length];
         return `<div class="person-card">
             <div class="person-card-head">
@@ -1140,8 +1159,11 @@ function renderPersonSection() {
             <div class="person-card-body">
                 ${mt.length
                     ? mt.map(t => `<div class="p-task-item" onclick="openEdit('${t.id}')">
-                        <span class="p-task-title">${esc(t.title)}</span>
-                        <span class="badge ${t.status==='작업중'?'badge-amber':'badge-red'}">${t.status}</span>
+                        <div style="flex:1;min-width:0">
+                            <div class="p-task-title">${esc(t.title)}</div>
+                            ${pTaskDue(t.dueDate)}
+                        </div>
+                        <span class="badge ${t.status==='작업중'?'badge-amber':'badge-red'}" style="flex-shrink:0">${t.status}</span>
                       </div>`).join('')
                     : `<div class="p-empty">✅ 진행중인 업무 없음</div>`}
             </div>
