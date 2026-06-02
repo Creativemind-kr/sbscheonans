@@ -8,6 +8,7 @@
     <!-- <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script> -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
@@ -278,6 +279,25 @@
         .toast { position: fixed; bottom: 24px; right: 24px; background: #1E293B; color: #fff; padding: 11px 18px; border-radius: 9px; font-size: .85rem; z-index: 200; opacity: 0; transform: translateY(8px); transition: all .25s; pointer-events: none; }
         .toast.show { opacity: 1; transform: translateY(0); }
 
+        /* ── 파일 첨부 ── */
+        .attach-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); margin-bottom: 4px; }
+        .attach-section-title { font-size: .83rem; font-weight: 700; margin-bottom: 8px; }
+        .attach-btn-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .attach-label { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-size: .8rem; font-weight: 500; cursor: pointer; transition: all .15s; }
+        .attach-label:hover { background: #EEF2FF; border-color: var(--primary); color: var(--primary); }
+        .upload-status { font-size: .78rem; color: var(--muted); }
+        .attach-list { display: flex; flex-direction: column; gap: 5px; }
+        .attach-item { display: flex; align-items: center; gap: 8px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px; }
+        .attach-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; flex-shrink: 0; cursor: pointer; }
+        .attach-icon { width: 36px; height: 36px; background: #EEF2FF; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .attach-info { flex: 1; min-width: 0; }
+        .attach-name { font-size: .82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .attach-name a { color: inherit; text-decoration: none; }
+        .attach-name a:hover { color: var(--primary); text-decoration: underline; }
+        .attach-size { font-size: .7rem; color: var(--muted); margin-top: 1px; }
+        .attach-del { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .85rem; padding: 3px; border-radius: 4px; flex-shrink: 0; transition: color .15s; line-height: 1; }
+        .attach-del:hover { color: var(--red); }
+
         /* ── 댓글 ── */
         .comment-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
         .comment-section-title { font-size: .83rem; font-weight: 700; margin-bottom: 10px; }
@@ -511,13 +531,26 @@
             <input id="f-title" type="text" placeholder="업무 제목">
         </div>
         <div class="form-row">
-            <label>설명 (선택)</label>
-            <textarea id="f-desc" placeholder="상세 내용"></textarea>
-        </div>
-        <div class="form-row">
             <label>담당자 (선택)</label>
             <input id="f-assignee" type="text" list="assignee-list" placeholder="담당자 이름">
             <datalist id="assignee-list"></datalist>
+        </div>
+        <div class="form-row">
+            <label>설명 (선택)</label>
+            <textarea id="f-desc" placeholder="상세 내용"></textarea>
+        </div>
+        <div class="attach-section">
+            <div class="attach-section-title">📎 첨부 파일</div>
+            <div class="attach-btn-row">
+                <label class="attach-label">
+                    파일 선택
+                    <input type="file" id="f-attach" style="display:none" multiple
+                        accept="image/*,.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.txt,.zip"
+                        onchange="handleFileSelect(event)">
+                </label>
+                <span class="upload-status" id="upload-status"></span>
+            </div>
+            <div class="attach-list" id="attach-list"></div>
         </div>
         <div class="form-row-inline">
             <div class="form-row">
@@ -640,6 +673,7 @@ firebase.initializeApp({
     appId: "1:901448586994:web:725325cb2ab3b3b870e26b"
 });
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 let CFG = { siteTitle: '팀 업무 리마인더', kakaoKey: '' };
 
@@ -660,6 +694,7 @@ function logout() { sessionStorage.removeItem('auth'); location.reload(); }
 // ── 데이터 ──
 let tasks = [], members = [], links = [], colOrder = {}, routineOrder = [], activity = [], dataLoaded = false;
 let commentsUnsubscribe = null;
+let currentAttachments = [], pendingTaskId = null;
 
 function loadData() {
     db.collection('tasks').onSnapshot(snapshot => {
@@ -942,7 +977,7 @@ function taskCard(t) {
         ${t.desc     ? `<div class="card-sub">${esc(t.desc)}</div>` : ''}
         ${t.assignee ? `<div class="card-sub">👤 ${esc(t.assignee)}</div>` : ''}
         <div class="status-btns">${btns}</div>
-        <div class="card-date">${dateStr}</div>
+        <div class="card-date">${t.attachments && t.attachments.length ? `<span style="margin-right:4px">📎${t.attachments.length}</span>` : ''}${dateStr}</div>
     </div>`;
 }
 
@@ -1361,6 +1396,8 @@ let editId = null;
 
 function openAddTask(forceRoutine = false) {
     editId = null;
+    pendingTaskId = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    currentAttachments = [];
     if (commentsUnsubscribe) { commentsUnsubscribe(); commentsUnsubscribe = null; }
     document.getElementById('comment-section').style.display = 'none';
     document.getElementById('task-modal-h').textContent = '업무 추가';
@@ -1370,6 +1407,8 @@ function openAddTask(forceRoutine = false) {
     document.getElementById('f-duedate').value   = '';
     document.getElementById('f-routine').checked = !!forceRoutine;
     document.getElementById('del-btn').style.display = 'none';
+    document.getElementById('attach-list').innerHTML = '';
+    document.getElementById('upload-status').textContent = '';
     document.getElementById('task-overlay').classList.add('show');
     document.getElementById('f-title').focus();
 }
@@ -1387,6 +1426,11 @@ function openEdit(id) {
     document.getElementById('f-duedate').value  = t.dueDate  || '';
     document.getElementById('f-routine').checked = !!t.isRoutine;
     document.getElementById('del-btn').style.display = 'inline-block';
+
+    // 첨부 파일
+    currentAttachments = [...(t.attachments || [])];
+    renderAttachList();
+    document.getElementById('upload-status').textContent = '';
 
     // 댓글 섹션
     if (commentsUnsubscribe) { commentsUnsubscribe(); commentsUnsubscribe = null; }
@@ -1430,9 +1474,10 @@ function saveTask() {
         }
         showToast('업무가 수정되었습니다.');
     } else {
-        const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        const id = pendingTaskId || Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
         db.collection('tasks').doc(id).set({
             id, title, desc, assignee, status, priority, dueDate, isRoutine,
+            attachments: currentAttachments,
             createdAt: Date.now(),
             doneAt: status === '완료' ? Date.now() : null
         });
@@ -1521,6 +1566,103 @@ function saveCfg() {
     document.title = CFG.siteTitle;
     document.getElementById('site-title').textContent = CFG.siteTitle;
     initKakao(); closeCfgModal(); showToast('설정이 저장되었습니다.');
+}
+
+// ── 파일 첨부 ──
+function renderAttachList() {
+    const el = document.getElementById('attach-list');
+    if (!el) return;
+    if (!currentAttachments.length) { el.innerHTML = ''; return; }
+    el.innerHTML = currentAttachments.map(a => {
+        const isImg = a.type && a.type.startsWith('image/');
+        const media = isImg
+            ? `<img class="attach-thumb" src="${a.url}" alt="${esc(a.name)}" onclick="window.open('${a.url}','_blank','noopener')">`
+            : `<div class="attach-icon">${fileTypeIcon(a.type)}</div>`;
+        return `<div class="attach-item">
+            ${media}
+            <div class="attach-info">
+                <div class="attach-name"><a href="${a.url}" target="_blank" rel="noopener">${esc(a.name)}</a></div>
+                <div class="attach-size">${formatFileSize(a.size)}</div>
+            </div>
+            <button class="attach-del" onclick="deleteAttachment('${a.id}')" title="삭제">✕</button>
+        </div>`;
+    }).join('');
+}
+
+function fileTypeIcon(type) {
+    if (!type) return '📄';
+    if (type.startsWith('image/')) return '🖼';
+    if (type.includes('pdf')) return '📕';
+    if (type.includes('sheet') || type.includes('excel')) return '📗';
+    if (type.includes('word') || type.includes('document')) return '📘';
+    if (type.includes('presentation') || type.includes('powerpoint')) return '📙';
+    if (type.includes('zip')) return '📦';
+    return '📄';
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + 'B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
+    return (bytes / 1048576).toFixed(1) + 'MB';
+}
+
+async function handleFileSelect(e) {
+    const files = [...e.target.files];
+    e.target.value = '';
+    for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) { showToast(`${file.name}: 10MB 초과`); continue; }
+        await uploadFile(file);
+    }
+}
+
+async function uploadFile(file) {
+    const targetId = editId || pendingTaskId;
+    if (!targetId) return;
+    const statusEl = document.getElementById('upload-status');
+    const safeFilename = `${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`;
+    const ref = storage.ref(`tasks/${targetId}/${safeFilename}`);
+    statusEl.textContent = '업로드 중...';
+    try {
+        const uploadTask = ref.put(file);
+        await new Promise((resolve, reject) => {
+            uploadTask.on('state_changed',
+                snap => { statusEl.textContent = `업로드 중 ${Math.round(snap.bytesTransferred / snap.totalBytes * 100)}%`; },
+                reject, resolve
+            );
+        });
+        const url = await ref.getDownloadURL();
+        const att = {
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+            name: file.name, url, type: file.type, size: file.size, createdAt: Date.now()
+        };
+        currentAttachments.push(att);
+        if (editId) {
+            db.collection('tasks').doc(editId).update({
+                attachments: firebase.firestore.FieldValue.arrayUnion(att)
+            });
+        }
+        renderAttachList();
+        statusEl.textContent = '';
+        showToast(`${file.name} 첨부 완료`);
+    } catch (err) {
+        statusEl.textContent = '';
+        showToast('업로드 실패');
+        console.error(err);
+    }
+}
+
+async function deleteAttachment(attId) {
+    if (!confirm('첨부 파일을 삭제할까요?')) return;
+    const att = currentAttachments.find(x => x.id === attId);
+    if (!att) return;
+    try { await storage.refFromURL(att.url).delete(); } catch (e) {}
+    currentAttachments = currentAttachments.filter(x => x.id !== attId);
+    if (editId) {
+        db.collection('tasks').doc(editId).update({ attachments: currentAttachments });
+    }
+    renderAttachList();
+    showToast('첨부 파일 삭제됨');
 }
 
 // ── 활동 피드 렌더 ──
