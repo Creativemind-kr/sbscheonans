@@ -277,6 +277,31 @@
         /* Toast */
         .toast { position: fixed; bottom: 24px; right: 24px; background: #1E293B; color: #fff; padding: 11px 18px; border-radius: 9px; font-size: .85rem; z-index: 200; opacity: 0; transform: translateY(8px); transition: all .25s; pointer-events: none; }
         .toast.show { opacity: 1; transform: translateY(0); }
+
+        /* ── 댓글 ── */
+        .comment-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .comment-section-title { font-size: .83rem; font-weight: 700; margin-bottom: 10px; }
+        .comment-list { margin-bottom: 10px; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+        .comment-item { background: #F8FAFC; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+        .comment-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+        .comment-author { font-size: .75rem; font-weight: 700; color: var(--primary); }
+        .comment-time { font-size: .7rem; color: var(--muted); }
+        .comment-text { font-size: .84rem; white-space: pre-wrap; word-break: break-all; }
+        .comment-input-row { display: flex; gap: 6px; }
+        .comment-input-row input { padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 7px; font-size: .85rem; font-family: inherit; outline: none; transition: border-color .2s; }
+        .comment-input-row input:focus { border-color: var(--primary); }
+        .comment-author-input { width: 86px; flex-shrink: 0; }
+        .comment-text-input { flex: 1; min-width: 0; }
+        .comment-empty { color: var(--muted); font-size: .8rem; text-align: center; padding: 8px 0; }
+
+        /* ── 활동 피드 탭 ── */
+        .feed-wrap { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        .feed-item { display: flex; gap: 10px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--border); }
+        .feed-item:last-child { border-bottom: none; }
+        .feed-icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .85rem; flex-shrink: 0; }
+        .feed-body { flex: 1; min-width: 0; }
+        .feed-text { font-size: .85rem; line-height: 1.5; }
+        .feed-time { font-size: .72rem; color: var(--muted); margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -311,6 +336,7 @@
             <button class="tab-btn active" data-tab="board" onclick="switchTab('board')">📋 보드</button>
             <button class="tab-btn" data-tab="done" onclick="switchTab('done')">✅ 완료 업무</button>
             <button class="tab-btn" data-tab="calendar" onclick="switchTab('calendar')">📅 완료 캘린더</button>
+            <button class="tab-btn" data-tab="feed" onclick="switchTab('feed')">📢 피드</button>
         </div>
     </div>
 
@@ -445,6 +471,13 @@
         </div>
     </div>
 
+    <!-- 탭: 활동 피드 -->
+    <div id="tab-feed" class="tab-pane">
+        <div class="feed-wrap" id="feed-wrap">
+            <div class="empty-state"><div class="ei">📭</div><p>아직 활동 내역이 없습니다.</p></div>
+        </div>
+    </div>
+
     <!-- 탭: 완료 캘린더 -->
     <div id="tab-calendar" class="tab-pane">
         <div class="cal-layout">
@@ -511,6 +544,18 @@
         <div class="checkbox-row">
             <input type="checkbox" id="f-routine">
             <label for="f-routine">🔄 상시 업무로 등록 (칸반 보드와 분리)</label>
+        </div>
+        <div id="comment-section" style="display:none">
+            <div class="comment-section">
+                <div class="comment-section-title">💬 댓글</div>
+                <div class="comment-list" id="comment-list"></div>
+                <div class="comment-input-row">
+                    <input type="text" id="c-author" class="comment-author-input" placeholder="이름" list="assignee-list">
+                    <input type="text" id="c-text" class="comment-text-input" placeholder="댓글 입력... (Enter 전송)"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addComment();}">
+                    <button class="btn btn-primary btn-sm" onclick="addComment()">전송</button>
+                </div>
+            </div>
         </div>
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closeTaskModal()">취소</button>
@@ -613,7 +658,8 @@ function login() {
 function logout() { sessionStorage.removeItem('auth'); location.reload(); }
 
 // ── 데이터 ──
-let tasks = [], members = [], links = [], colOrder = {}, routineOrder = [], dataLoaded = false;
+let tasks = [], members = [], links = [], colOrder = {}, routineOrder = [], activity = [], dataLoaded = false;
+let commentsUnsubscribe = null;
 
 function loadData() {
     db.collection('tasks').onSnapshot(snapshot => {
@@ -643,11 +689,20 @@ function loadData() {
         updateAssigneeList();
         renderAll();
     });
+    db.collection('activity').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
+        activity = snapshot.docs.map(d => d.data());
+        if (activeTab === 'feed') renderFeedTab();
+    });
 }
-function saveMembers()  { db.doc('config/app').set({ members },  { merge: true }); }
-function saveLinks()    { db.doc('config/app').set({ links },    { merge: true }); }
+function saveMembers()      { db.doc('config/app').set({ members },      { merge: true }); }
+function saveLinks()        { db.doc('config/app').set({ links },        { merge: true }); }
 function saveColOrder()     { db.doc('config/app').set({ colOrder },     { merge: true }); }
 function saveRoutineOrder() { db.doc('config/app').set({ routineOrder }, { merge: true }); }
+
+function logActivity(type, taskId, taskTitle, detail) {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    db.collection('activity').doc(id).set({ id, type, taskId: taskId || '', taskTitle: taskTitle || '', detail: detail || '', createdAt: Date.now() });
+}
 
 function getAllAssignees() {
     const fromTasks = tasks.map(t => t.assignee).filter(a => a && a.trim());
@@ -680,6 +735,7 @@ function renderAll() {
     renderLinksSection();
     if (activeTab === 'done')     renderDoneTab();
     if (activeTab === 'calendar') renderCalendarTab();
+    if (activeTab === 'feed')     renderFeedTab();
 }
 
 // ── 탭 ──
@@ -690,6 +746,7 @@ function switchTab(name) {
     document.getElementById(`tab-${name}`).classList.add('active');
     if (name === 'done')     renderDoneTab();
     if (name === 'calendar') renderCalendarTab();
+    if (name === 'feed')     renderFeedTab();
 }
 
 // ── 통계 위젯 ──
@@ -755,6 +812,7 @@ function toggleRoutine(id) {
         status: newStatus,
         doneAt: newStatus === '완료' ? Date.now() : null
     });
+    logActivity('routine_toggle', id, t.title, newStatus === '완료' ? '완료' : '재시작');
     showToast(newStatus === '완료' ? '완료 처리됨' : '다시 시작');
 }
 
@@ -889,8 +947,10 @@ function taskCard(t) {
 }
 
 function quickStatus(id, s) {
-    if (!tasks.find(x => x.id === id)) return;
+    const task = tasks.find(x => x.id === id);
+    if (!task) return;
     db.collection('tasks').doc(id).update({ status: s, doneAt: s === '완료' ? Date.now() : null });
+    logActivity('status', id, task.title, s);
     showToast(`상태 변경: ${s}`);
 }
 
@@ -929,6 +989,7 @@ function drop(e, status) {
             status,
             doneAt: status === '완료' ? Date.now() : null
         });
+        logActivity('status', dragId, dragTask.title, status);
         showToast(`상태 변경: ${status}`);
     }
 
@@ -1300,6 +1361,8 @@ let editId = null;
 
 function openAddTask(forceRoutine = false) {
     editId = null;
+    if (commentsUnsubscribe) { commentsUnsubscribe(); commentsUnsubscribe = null; }
+    document.getElementById('comment-section').style.display = 'none';
     document.getElementById('task-modal-h').textContent = '업무 추가';
     ['f-title','f-desc','f-assignee'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('f-status').value    = '작업 시작 안함';
@@ -1324,11 +1387,28 @@ function openEdit(id) {
     document.getElementById('f-duedate').value  = t.dueDate  || '';
     document.getElementById('f-routine').checked = !!t.isRoutine;
     document.getElementById('del-btn').style.display = 'inline-block';
+
+    // 댓글 섹션
+    if (commentsUnsubscribe) { commentsUnsubscribe(); commentsUnsubscribe = null; }
+    document.getElementById('comment-section').style.display = 'block';
+    document.getElementById('comment-list').innerHTML = '<div class="comment-empty">불러오는 중...</div>';
+    document.getElementById('c-author').value = sessionStorage.getItem('last_comment_author') || '';
+    document.getElementById('c-text').value = '';
+    commentsUnsubscribe = db.collection('comments').where('taskId', '==', id)
+        .onSnapshot(snapshot => {
+            const comments = snapshot.docs.map(d => d.data()).sort((a, b) => a.createdAt - b.createdAt);
+            renderComments(comments);
+        });
+
     document.getElementById('task-overlay').classList.add('show');
     document.getElementById('f-title').focus();
 }
 
-function closeTaskModal() { document.getElementById('task-overlay').classList.remove('show'); editId = null; }
+function closeTaskModal() {
+    document.getElementById('task-overlay').classList.remove('show');
+    editId = null;
+    if (commentsUnsubscribe) { commentsUnsubscribe(); commentsUnsubscribe = null; }
+}
 
 function saveTask() {
     const title = document.getElementById('f-title').value.trim();
@@ -1342,6 +1422,7 @@ function saveTask() {
     if (editId) {
         const t = tasks.find(x => x.id === editId);
         if (t) {
+            if (t.status !== status) logActivity('status', editId, title, status);
             const updates = { title, desc, assignee, status, priority, dueDate, isRoutine };
             if (t.status !== '완료' && status === '완료') updates.doneAt = Date.now();
             if (t.status === '완료' && status !== '완료') updates.doneAt = null;
@@ -1355,6 +1436,7 @@ function saveTask() {
             createdAt: Date.now(),
             doneAt: status === '완료' ? Date.now() : null
         });
+        logActivity('task_add', id, title, assignee);
         showToast('업무가 추가되었습니다.');
     }
     closeTaskModal();
@@ -1362,6 +1444,8 @@ function saveTask() {
 
 function deleteEditing() {
     if (!editId || !confirm('이 업무를 삭제하시겠습니까?')) return;
+    const task = tasks.find(x => x.id === editId);
+    if (task) logActivity('task_del', editId, task.title, '');
     db.collection('tasks').doc(editId).delete();
     showToast('삭제되었습니다.'); closeTaskModal();
 }
@@ -1437,6 +1521,78 @@ function saveCfg() {
     document.title = CFG.siteTitle;
     document.getElementById('site-title').textContent = CFG.siteTitle;
     initKakao(); closeCfgModal(); showToast('설정이 저장되었습니다.');
+}
+
+// ── 활동 피드 렌더 ──
+function renderFeedTab() {
+    const wrap = document.getElementById('feed-wrap');
+    if (!wrap) return;
+    if (!activity.length) {
+        wrap.innerHTML = `<div class="empty-state"><div class="ei">📭</div><p>아직 활동 내역이 없습니다.</p></div>`;
+        return;
+    }
+    const icons  = { task_add: '✚', status: '↪', task_del: '✕', comment: '💬', routine_toggle: '🔄' };
+    const colors = { task_add: '#EEF2FF', status: '#FEF3C7', task_del: '#FEE2E2', comment: '#F0FDF4', routine_toggle: '#F0F9FF' };
+    wrap.innerHTML = activity.map(a => `
+        <div class="feed-item">
+            <div class="feed-icon" style="background:${colors[a.type]||'#F8FAFC'}">${icons[a.type]||'•'}</div>
+            <div class="feed-body">
+                <div class="feed-text">${buildFeedText(a)}</div>
+                <div class="feed-time">${timeAgo(a.createdAt)}</div>
+            </div>
+        </div>`).join('');
+}
+
+function buildFeedText(a) {
+    const t = `<strong>${esc(a.taskTitle)}</strong>`;
+    if (a.type === 'task_add')       return `${t} 업무 추가${a.detail ? ` · 담당자: ${esc(a.detail)}` : ''}`;
+    if (a.type === 'status')         return `${t} → <span style="color:var(--primary);font-weight:600">${esc(a.detail)}</span>`;
+    if (a.type === 'task_del')       return `${t} 삭제됨`;
+    if (a.type === 'comment')        return `${t}<br><span style="color:var(--muted);font-size:.8rem">${esc(a.detail)}</span>`;
+    if (a.type === 'routine_toggle') return `🔄 ${t} → <span style="font-weight:600">${esc(a.detail)}</span>`;
+    return esc(a.detail || '');
+}
+
+function timeAgo(ts) {
+    const diff = Date.now() - ts;
+    if (diff < 60000)    return '방금';
+    if (diff < 3600000)  return `${Math.floor(diff / 60000)}분 전`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}시간 전`;
+    const d = new Date(ts);
+    return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+// ── 댓글 ──
+function renderComments(comments) {
+    const el = document.getElementById('comment-list');
+    if (!el) return;
+    if (!comments.length) {
+        el.innerHTML = '<div class="comment-empty">첫 댓글을 남겨보세요.</div>';
+        return;
+    }
+    el.innerHTML = comments.map(c => `
+        <div class="comment-item">
+            <div class="comment-item-top">
+                <span class="comment-author">${esc(c.author || '익명')}</span>
+                <span class="comment-time">${timeAgo(c.createdAt)}</span>
+            </div>
+            <div class="comment-text">${esc(c.text)}</div>
+        </div>`).join('');
+    el.scrollTop = el.scrollHeight;
+}
+
+function addComment() {
+    if (!editId) return;
+    const author = document.getElementById('c-author').value.trim() || '익명';
+    const text   = document.getElementById('c-text').value.trim();
+    if (!text) { document.getElementById('c-text').focus(); return; }
+    const task = tasks.find(x => x.id === editId);
+    sessionStorage.setItem('last_comment_author', author);
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    db.collection('comments').doc(id).set({ id, taskId: editId, author, text, createdAt: Date.now() });
+    logActivity('comment', editId, task ? task.title : '', `${author}: ${text.slice(0,40)}${text.length>40?'…':''}`);
+    document.getElementById('c-text').value = '';
+    showToast('댓글 등록됨');
 }
 
 // ── 유틸 ──
