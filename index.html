@@ -8,7 +8,6 @@
     <!-- <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script> -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
@@ -676,7 +675,8 @@ firebase.initializeApp({
     appId: "1:901448586994:web:725325cb2ab3b3b870e26b"
 });
 const db = firebase.firestore();
-const storage = firebase.storage();
+const CLOUDINARY_CLOUD = 'dbdi00mlm';
+const CLOUDINARY_PRESET = 'sbscheonans';
 
 let CFG = { siteTitle: '팀 업무 리마인더', kakaoKey: '' };
 
@@ -1652,18 +1652,28 @@ async function uploadFile(file) {
     const targetId = editId || pendingTaskId;
     if (!targetId) return;
     const statusEl = document.getElementById('upload-status');
-    const safeFilename = `${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`;
-    const ref = storage.ref(`tasks/${targetId}/${safeFilename}`);
     statusEl.textContent = '업로드 중...';
     try {
-        const uploadTask = ref.put(file);
-        await new Promise((resolve, reject) => {
-            uploadTask.on('state_changed',
-                snap => { statusEl.textContent = `업로드 중 ${Math.round(snap.bytesTransferred / snap.totalBytes * 100)}%`; },
-                reject, resolve
-            );
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_PRESET);
+        formData.append('public_id', `tasks/${targetId}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`);
+
+        const xhr = new XMLHttpRequest();
+        const url = await new Promise((resolve, reject) => {
+            xhr.upload.onprogress = e => {
+                if (e.lengthComputable) statusEl.textContent = `업로드 중 ${Math.round(e.loaded / e.total * 100)}%`;
+            };
+            xhr.onload = () => {
+                const res = JSON.parse(xhr.responseText);
+                if (xhr.status === 200) resolve(res.secure_url);
+                else reject(new Error(res.error?.message || '업로드 실패'));
+            };
+            xhr.onerror = () => reject(new Error('네트워크 오류'));
+            xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`);
+            xhr.send(formData);
         });
-        const url = await ref.getDownloadURL();
+
         const att = {
             id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
             name: file.name, url, type: file.type, size: file.size, createdAt: Date.now()
@@ -1679,16 +1689,13 @@ async function uploadFile(file) {
         showToast(`${file.name} 첨부 완료`);
     } catch (err) {
         statusEl.textContent = '';
-        showToast('업로드 실패');
+        showToast('업로드 실패: ' + err.message);
         console.error(err);
     }
 }
 
 async function deleteAttachment(attId) {
     if (!confirm('첨부 파일을 삭제할까요?')) return;
-    const att = currentAttachments.find(x => x.id === attId);
-    if (!att) return;
-    try { await storage.refFromURL(att.url).delete(); } catch (e) {}
     currentAttachments = currentAttachments.filter(x => x.id !== attId);
     if (editId) {
         db.collection('tasks').doc(editId).update({ attachments: currentAttachments });
