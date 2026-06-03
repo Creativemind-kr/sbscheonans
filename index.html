@@ -2110,23 +2110,15 @@ function getChartPeriodData(person) {
         const year = now.getFullYear(), month = now.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const dayNames = ['일','월','화','수','목','금','토'];
-        let weekNum = 0, prevMondayKey = null;
         for (let d = 1; d <= daysInMonth; d++) {
             const date = new Date(year, month, d);
             const dow = date.getDay();
             if (dow === 0 || dow === 6) continue;
-            const monday = getMondayOfWeek(date);
-            const mondayKey = monday.getTime();
-            const isNewWeek = mondayKey !== prevMondayKey;
-            if (isNewWeek) { weekNum++; prevMondayKey = mondayKey; }
             const dd = String(d).padStart(2, '0');
-            const label = isNewWeek
-                ? [`${weekNum}주차`, `${dd}(${dayNames[dow]})`]
-                : `${dd}(${dayNames[dow]})`;
             const dayStart = new Date(year, month, d).getTime();
             const dayEnd = new Date(year, month, d, 23, 59, 59, 999).getTime();
             const dt = base.filter(t => t.doneAt >= dayStart && t.doneAt <= dayEnd);
-            labels.push(label); data.push(dt.length); taskMap.push(dt);
+            labels.push(`${dd}(${dayNames[dow]})`); data.push(dt.length); taskMap.push(dt);
         }
     } else if (analysisPeriod === 'week') {
         for (let w = 11; w >= 0; w--) {
