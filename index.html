@@ -8,6 +8,7 @@
     <!-- <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script> -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
@@ -324,6 +325,42 @@
         .feed-body { flex: 1; min-width: 0; }
         .feed-text { font-size: .85rem; line-height: 1.5; }
         .feed-time { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+
+        /* 피드 탭 (오른쪽 작은 탭) */
+        .tab-btn-feed { margin-left: auto; font-size: .78rem; padding: 7px 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 6px 6px 0 0; margin-bottom: -1px; background: none; cursor: pointer; transition: all .15s; white-space: nowrap; }
+        .tab-btn-feed:hover { color: var(--text); border-color: #94A3B8; }
+        .tab-btn-feed.active { color: var(--primary); border-color: var(--primary); background: #EEF2FF; }
+
+        /* 완료 칸 더보기 버튼 */
+        .more-btn { width: 100%; padding: 7px; background: #F8FAFC; border: 1.5px dashed #CBD5E1; border-radius: 7px; cursor: pointer; font-size: .8rem; color: var(--muted); margin-top: 4px; transition: all .15s; }
+        .more-btn:hover { background: #EEF2FF; color: var(--primary); border-color: var(--primary); }
+
+        /* 담당자 카드 드래그 */
+        .person-card { transition: opacity .2s; cursor: grab; }
+        .person-card:active { cursor: grabbing; }
+        .person-card.dragging { opacity: .35; }
+        .person-grid.drag-over-person { background: #EEF2FF; border-radius: 12px; outline: 2px dashed var(--primary); }
+
+        /* ── 업무 분석 탭 ── */
+        .analysis-wrap { padding: 16px 24px 32px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+        .analysis-filter { display: flex; gap: 6px; }
+        .af-btn { padding: 7px 18px; border-radius: 20px; border: 1.5px solid var(--border); background: #fff; font-size: .85rem; font-weight: 500; cursor: pointer; color: var(--muted); transition: all .15s; }
+        .af-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .af-btn:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+        .analysis-text-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+        .analysis-text-title { font-size: .95rem; font-weight: 700; margin-bottom: 14px; }
+        .analysis-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #F1F5F9; }
+        .analysis-row:last-child { border-bottom: none; }
+        .analysis-person-name { font-weight: 700; font-size: .83rem; min-width: 90px; color: var(--primary); line-height: 1.6; }
+        .analysis-count { font-size: .83rem; color: var(--text); flex-shrink: 0; min-width: 70px; line-height: 1.6; }
+        .analysis-notes { font-size: .82rem; color: var(--muted); flex: 1; line-height: 1.7; }
+        .an-tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: .74rem; font-weight: 600; margin: 1px 2px 1px 0; }
+        .an-warn { background: #FEF3C7; color: #D97706; }
+        .an-alert { background: #FEE2E2; color: #DC2626; }
+        .an-good { background: #D1FAE5; color: #065F46; }
+        .analysis-chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; }
+        .analysis-chart-title { font-size: .9rem; font-weight: 700; margin-bottom: 12px; }
+        .analysis-chart-wrap { position: relative; height: 160px; }
     </style>
 </head>
 <body>
@@ -358,7 +395,8 @@
             <button class="tab-btn active" data-tab="board" onclick="switchTab('board')">📋 보드</button>
             <button class="tab-btn" data-tab="done" onclick="switchTab('done')">✅ 완료 업무</button>
             <button class="tab-btn" data-tab="calendar" onclick="switchTab('calendar')">📅 완료 캘린더</button>
-            <button class="tab-btn" data-tab="feed" onclick="switchTab('feed')">📢 피드</button>
+            <button class="tab-btn" data-tab="analysis" onclick="switchTab('analysis')">📊 업무 분석</button>
+            <button class="tab-btn-feed" data-tab="feed" onclick="switchTab('feed')">📢 피드</button>
         </div>
     </div>
 
@@ -458,7 +496,10 @@
                     <button class="btn btn-secondary btn-sm" onclick="addMember()">추가</button>
                 </div>
             </div>
-            <div class="person-grid" id="person-grid"></div>
+            <div class="person-grid" id="person-grid"
+                ondragover="personGridDragOver(event)"
+                ondragleave="personGridDragLeave(event)"
+                ondrop="personGridDrop(event)"></div>
         </div>
 
         <!-- 참고 링크 섹션 -->
@@ -497,6 +538,19 @@
     <div id="tab-feed" class="tab-pane">
         <div class="feed-wrap" id="feed-wrap">
             <div class="empty-state"><div class="ei">📭</div><p>아직 활동 내역이 없습니다.</p></div>
+        </div>
+    </div>
+
+    <!-- 탭: 업무 분석 -->
+    <div id="tab-analysis" class="tab-pane">
+        <div class="analysis-wrap" id="analysis-wrap">
+            <div class="analysis-filter">
+                <button class="af-btn" data-period="week" onclick="setAnalysisPeriod('week')">주별</button>
+                <button class="af-btn active" data-period="month" onclick="setAnalysisPeriod('month')">달별</button>
+                <button class="af-btn" data-period="year" onclick="setAnalysisPeriod('year')">연별</button>
+            </div>
+            <div id="analysis-text-section"></div>
+            <div id="analysis-charts-section"></div>
         </div>
     </div>
 
@@ -612,6 +666,17 @@
     </div>
 </div>
 
+<!-- 분석 기간 업무 팝업 -->
+<div class="overlay" id="analysis-period-overlay" onclick="if(event.target===this)closeAnalysisPeriodModal()">
+    <div class="modal">
+        <h2 id="analysis-period-modal-h"></h2>
+        <div class="reminder-list" id="analysis-period-modal-list"></div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeAnalysisPeriodModal()">닫기</button>
+        </div>
+    </div>
+</div>
+
 <!-- 날짜 클릭 모달 -->
 <div class="overlay" id="day-overlay" onclick="if(event.target===this)closeDayModal()">
     <div class="modal">
@@ -695,7 +760,7 @@ function login() {
 function logout() { sessionStorage.removeItem('auth'); location.reload(); }
 
 // ── 데이터 ──
-let tasks = [], members = [], links = [], colOrder = {}, routineOrder = [], activity = [], dataLoaded = false;
+let tasks = [], members = [], links = [], colOrder = {}, routineOrder = [], memberOrder = [], activity = [], dataLoaded = false;
 let commentsUnsubscribe = null;
 let currentAttachments = [], pendingTaskId = null;
 
@@ -723,6 +788,7 @@ function loadData() {
             if (el) el.textContent = CFG.siteTitle;
         }
         if (data.kakaoKey !== undefined) CFG.kakaoKey = data.kakaoKey;
+        memberOrder = data.memberOrder || [];
         initKakao();
         updateAssigneeList();
         renderAll();
@@ -736,6 +802,54 @@ function saveMembers()      { db.doc('config/app').set({ members },      { merge
 function saveLinks()        { db.doc('config/app').set({ links },        { merge: true }); }
 function saveColOrder()     { db.doc('config/app').set({ colOrder },     { merge: true }); }
 function saveRoutineOrder() { db.doc('config/app').set({ routineOrder }, { merge: true }); }
+function saveMemberOrder()  { db.doc('config/app').set({ memberOrder },  { merge: true }); renderPersonSection(); }
+
+// ── 담당자 카드 드래그 순서 ──
+let personDragName = null;
+
+function personCardDragStart(e, name) {
+    personDragName = name;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => e.currentTarget.classList.add('dragging'), 0);
+}
+function personCardDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    const g = document.getElementById('person-grid');
+    if (g) g.classList.remove('drag-over-person');
+}
+function personGridDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over-person');
+}
+function personGridDragLeave(e) {
+    if (!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.classList.remove('drag-over-person');
+}
+function personGridDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over-person');
+    if (!personDragName) return;
+    const cards = [...e.currentTarget.querySelectorAll('.person-card[data-person]')].filter(c => c.dataset.person !== personDragName);
+    let insertBefore = null;
+    for (const card of cards) {
+        const r = card.getBoundingClientRect();
+        if (e.clientY < r.top + r.height / 2) { insertBefore = card.dataset.person; break; }
+    }
+    const allA = getAllAssignees();
+    const base = memberOrder.length ? [...memberOrder] : [...allA];
+    const extras = allA.filter(a => !base.includes(a));
+    const full = [...base, ...extras];
+    const filtered = full.filter(n => n !== personDragName);
+    if (insertBefore) {
+        const idx = filtered.indexOf(insertBefore);
+        idx !== -1 ? filtered.splice(idx, 0, personDragName) : filtered.push(personDragName);
+    } else {
+        filtered.push(personDragName);
+    }
+    memberOrder = filtered;
+    saveMemberOrder();
+    personDragName = null;
+}
 
 function logActivity(type, taskId, taskTitle, detail) {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -774,17 +888,20 @@ function renderAll() {
     if (activeTab === 'done')     renderDoneTab();
     if (activeTab === 'calendar') renderCalendarTab();
     if (activeTab === 'feed')     renderFeedTab();
+    if (activeTab === 'analysis') renderAnalysisTab();
 }
 
 // ── 탭 ──
 function switchTab(name) {
     activeTab = name;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab-btn-feed').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.getElementById(`tab-${name}`).classList.add('active');
     if (name === 'done')     renderDoneTab();
     if (name === 'calendar') renderCalendarTab();
     if (name === 'feed')     renderFeedTab();
+    if (name === 'analysis') renderAnalysisTab();
 }
 
 // ── 통계 위젯 ──
@@ -909,13 +1026,21 @@ function dismissDeadlineBanner() {
 }
 
 // ── 칸반 보드 ──
+let doneColExpanded = false;
+
 function renderBoard() {
     renderCol('작업 시작 안함', 'col-ns', 'cnt-ns');
     renderCol('작업중',         'col-ip', 'cnt-ip');
     renderCol('완료',           'col-dn', 'cnt-dn');
 }
 
+function toggleDoneExpand() {
+    doneColExpanded = !doneColExpanded;
+    renderBoard();
+}
+
 const PRIO_ORDER = { '높음': 0, '보통': 1, '낮음': 2 };
+const DONE_LIMIT = 5;
 
 function renderCol(status, colId, cntId) {
     const list = tasks.filter(t => t.status === status && !t.isRoutine);
@@ -936,7 +1061,14 @@ function renderCol(status, colId, cntId) {
         if (pa !== pb) return pa - pb;
         return (a.createdAt || 0) - (b.createdAt || 0);
     });
-    el.innerHTML = list.map(t => taskCard(t)).join('');
+    const isDone = status === '완료';
+    const displayList = isDone && !doneColExpanded && list.length > DONE_LIMIT ? list.slice(0, DONE_LIMIT) : list;
+    el.innerHTML = displayList.map(t => taskCard(t)).join('');
+    if (isDone && list.length > DONE_LIMIT) {
+        el.innerHTML += doneColExpanded
+            ? `<button class="more-btn" onclick="toggleDoneExpand()">접기 ▴</button>`
+            : `<button class="more-btn" onclick="toggleDoneExpand()">더보기 ${list.length - DONE_LIMIT}건 ▾</button>`;
+    }
 }
 
 function dueBadge(dueDate, status) {
@@ -1137,7 +1269,10 @@ function renderPersonSection() {
         grid.innerHTML = `<div style="color:var(--muted);font-size:.85rem;padding:8px 0">업무에 담당자를 입력하면 여기에 자동으로 정리됩니다.</div>`;
         return;
     }
-    grid.innerHTML = allAssignees.map(m => {
+    const ordered = memberOrder.filter(m => allAssignees.includes(m));
+    const rest = allAssignees.filter(m => !memberOrder.includes(m));
+    const sortedAssignees = [...ordered, ...rest];
+    grid.innerHTML = sortedAssignees.map(m => {
         const mt = incomplete.filter(t => t.assignee === m);
         mt.sort((a, b) => {
             const aD = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
@@ -1145,7 +1280,9 @@ function renderPersonSection() {
             return aD - bD;
         });
         const col = avatarColors[m.charCodeAt(0) % avatarColors.length];
-        return `<div class="person-card">
+        return `<div class="person-card" data-person="${esc(m)}" draggable="true"
+            ondragstart="personCardDragStart(event,'${esc(m)}')"
+            ondragend="personCardDragEnd(event)">
             <div class="person-card-head">
                 <div class="p-avatar-wrap">
                     <div class="p-avatar" style="background:${col}">${m.charAt(0)}</div>
@@ -1154,7 +1291,7 @@ function renderPersonSection() {
                         <div class="p-sub">${mt.length}건 진행중</div>
                     </div>
                 </div>
-                ${members.includes(m) ? `<button class="p-remove" onclick="removeMember('${esc(m)}')" title="제거">✕</button>` : ''}
+                ${members.includes(m) ? `<button class="p-remove" onclick="event.stopPropagation();removeMember('${esc(m)}')" title="제거">✕</button>` : ''}
             </div>
             <div class="person-card-body">
                 ${mt.length
@@ -1797,6 +1934,213 @@ function addComment() {
     document.getElementById('c-text').value = '';
     showToast('댓글 등록됨');
 }
+
+// ── 업무 분석 탭 ──
+let analysisPeriod = 'month';
+const chartRegistry = {};
+
+function destroyChart(id) {
+    if (chartRegistry[id]) { chartRegistry[id].destroy(); delete chartRegistry[id]; }
+}
+
+function setAnalysisPeriod(period) {
+    analysisPeriod = period;
+    document.querySelectorAll('.af-btn').forEach(b => b.classList.toggle('active', b.dataset.period === period));
+    renderAnalysisTab();
+}
+
+function renderAnalysisTab() {
+    buildAnalysisTextSection();
+    buildAnalysisCharts();
+}
+
+function getAnalysisPersonOrder() {
+    const all = getAllAssignees();
+    const ordered = memberOrder.filter(m => all.includes(m));
+    const rest = all.filter(m => !memberOrder.includes(m));
+    return [...ordered, ...rest];
+}
+
+function getMondayOfWeek(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    d.setHours(0,0,0,0);
+    return d;
+}
+
+function getWeekOfMonth(date) {
+    const first = new Date(date.getFullYear(), date.getMonth(), 1);
+    return Math.ceil((date.getDate() + first.getDay() - 1) / 7);
+}
+
+function buildAnalysisTextSection() {
+    const now = new Date();
+    const completed = tasks.filter(t => t.status === '완료' && t.doneAt);
+    let periodLabel, periodTasks;
+
+    if (analysisPeriod === 'week') {
+        const ws = getMondayOfWeek(now);
+        const we = new Date(ws); we.setDate(ws.getDate() + 6); we.setHours(23,59,59,999);
+        periodTasks = completed.filter(t => t.doneAt >= ws.getTime() && t.doneAt <= we.getTime());
+        const wn = getWeekOfMonth(now);
+        periodLabel = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${wn}주차 업무 결산`;
+    } else if (analysisPeriod === 'month') {
+        periodTasks = completed.filter(t => {
+            const d = new Date(t.doneAt);
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        });
+        periodLabel = `${now.getFullYear()}년 ${now.getMonth()+1}월 업무 결산`;
+    } else {
+        periodTasks = completed.filter(t => new Date(t.doneAt).getFullYear() === now.getFullYear());
+        periodLabel = `${now.getFullYear()}년 연간 업무 결산`;
+    }
+
+    const persons = getAnalysisPersonOrder();
+    const allNonRoutine = periodTasks.filter(t => !t.isRoutine);
+    const totalNonRoutine = allNonRoutine.length;
+
+    let rows = '';
+
+    // 상시업무 행
+    const routineDone = periodTasks.filter(t => t.isRoutine);
+    rows += buildAnalysisRow('🔄 상시업무', `${routineDone.length}건 처리`,
+        routineDone.length > 0 ? `<span class="an-tag an-warn">완료 ${routineDone.length}건</span>` : '—');
+
+    // 담당자별 행
+    persons.forEach(person => {
+        const pt = allNonRoutine.filter(t => t.assignee === person);
+        const tags = [];
+
+        if (analysisPeriod === 'month' && pt.length > 0) {
+            const weeks = [0,0,0,0,0];
+            pt.forEach(t => { const w = Math.min(Math.floor((new Date(t.doneAt).getDate()-1)/7),4); weeks[w]++; });
+            const peak = weeks.indexOf(Math.max(...weeks));
+            if (Math.max(...weeks) > 1) tags.push(`<span class="an-tag an-warn">${peak+1}주차 집중</span>`);
+        }
+        if (analysisPeriod === 'year' && pt.length > 0) {
+            const months = new Array(12).fill(0);
+            pt.forEach(t => { months[new Date(t.doneAt).getMonth()]++; });
+            const peakM = months.indexOf(Math.max(...months));
+            if (Math.max(...months) > 0) tags.push(`<span class="an-tag an-warn">${peakM+1}월 최다</span>`);
+        }
+        const pRoutine = periodTasks.filter(t => t.isRoutine && t.assignee === person);
+        if (pRoutine.length > 0 && pt.length > 0 && pRoutine.length/(pRoutine.length+pt.length) > 0.5)
+            tags.push(`<span class="an-tag an-alert">상시업무 과중</span>`);
+        if (totalNonRoutine > 0 && persons.length > 1 && pt.length/totalNonRoutine > 0.45)
+            tags.push(`<span class="an-tag an-alert">업무 분배 필요</span>`);
+        if (pt.length === 0 && analysisPeriod !== 'week')
+            tags.push(`<span class="an-tag an-warn">완료 없음</span>`);
+        if (pt.length > 0 && tags.length === 0)
+            tags.push(`<span class="an-tag an-good">정상</span>`);
+
+        rows += buildAnalysisRow(`👤 ${esc(person)}`, `${pt.length}건 처리`, tags.join('') || '—');
+    });
+
+    document.getElementById('analysis-text-section').innerHTML = `
+        <div class="analysis-text-card">
+            <div class="analysis-text-title">📊 ${periodLabel}</div>
+            ${rows}
+        </div>`;
+}
+
+function buildAnalysisRow(name, count, notes) {
+    return `<div class="analysis-row">
+        <div class="analysis-person-name">${name}</div>
+        <div class="analysis-count">${count}</div>
+        <div class="analysis-notes">${notes}</div>
+    </div>`;
+}
+
+function buildAnalysisCharts() {
+    Object.keys(chartRegistry).forEach(id => destroyChart(id));
+    const persons = getAnalysisPersonOrder();
+    const allPersons = ['상시업무', ...persons];
+    const colors = ['#8B5CF6','#4F46E5','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#F97316'];
+
+    let html = '';
+    allPersons.forEach((person, i) => {
+        html += `<div class="analysis-chart-card">
+            <div class="analysis-chart-title">${person === '상시업무' ? '🔄' : '👤'} ${esc(person)}</div>
+            <div class="analysis-chart-wrap"><canvas id="chart-p${i}"></canvas></div>
+        </div>`;
+    });
+    document.getElementById('analysis-charts-section').innerHTML = html;
+
+    allPersons.forEach((person, i) => {
+        const chartId = `chart-p${i}`;
+        const { labels, data, taskMap } = getChartPeriodData(person);
+        const color = colors[i % colors.length];
+        const canvas = document.getElementById(chartId);
+        if (!canvas) return;
+        chartRegistry[chartId] = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{ label: person, data, backgroundColor: color + 'BB', borderColor: color, borderWidth: 1, borderRadius: 4 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.raw}건` } } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } },
+                onClick: (e, els) => {
+                    if (!els.length) return;
+                    const idx = els[0].index;
+                    showAnalysisPeriodTasks(`${esc(person)} — ${labels[idx]}`, taskMap[idx] || []);
+                }
+            }
+        });
+    });
+}
+
+function getChartPeriodData(person) {
+    const isRoutine = person === '상시업무';
+    const completed = tasks.filter(t => t.status === '완료' && t.doneAt);
+    const base = isRoutine
+        ? completed.filter(t => t.isRoutine)
+        : completed.filter(t => !t.isRoutine && t.assignee === person);
+
+    const now = new Date();
+    const labels = [], data = [], taskMap = [];
+
+    if (analysisPeriod === 'week') {
+        for (let w = 11; w >= 0; w--) {
+            const ws = getMondayOfWeek(new Date(now.getTime() - w * 7 * 86400000));
+            const we = new Date(ws); we.setDate(ws.getDate() + 6); we.setHours(23,59,59,999);
+            const wt = base.filter(t => t.doneAt >= ws.getTime() && t.doneAt <= we.getTime());
+            labels.push(`${ws.getMonth()+1}/${ws.getDate()}`);
+            data.push(wt.length); taskMap.push(wt);
+        }
+    } else if (analysisPeriod === 'month') {
+        for (let m = 11; m >= 0; m--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+            const mt = base.filter(t => { const td = new Date(t.doneAt); return td.getFullYear()===d.getFullYear()&&td.getMonth()===d.getMonth(); });
+            labels.push(`${d.getMonth()+1}월`);
+            data.push(mt.length); taskMap.push(mt);
+        }
+    } else {
+        const years = [...new Set(base.map(t => new Date(t.doneAt).getFullYear()))];
+        if (!years.includes(now.getFullYear())) years.push(now.getFullYear());
+        if (years.length < 2) years.unshift(now.getFullYear() - 1);
+        years.sort().forEach(y => {
+            const yt = base.filter(t => new Date(t.doneAt).getFullYear() === y);
+            labels.push(`${y}년`); data.push(yt.length); taskMap.push(yt);
+        });
+    }
+    return { labels, data, taskMap };
+}
+
+function showAnalysisPeriodTasks(title, list) {
+    document.getElementById('analysis-period-modal-h').textContent = `${title} (${list.length}건)`;
+    document.getElementById('analysis-period-modal-list').innerHTML = list.length
+        ? list.map(t => `<div class="reminder-item">
+            <div><div class="ri-title">${esc(t.title)}</div>${t.assignee?`<div class="ri-sub">👤 ${esc(t.assignee)}</div>`:''}</div>
+            <span class="badge" style="background:#D1FAE5;color:#065F46">✓ 완료</span>
+          </div>`).join('')
+        : `<div class="empty-state"><div class="ei">📭</div><p>해당 기간 완료 업무 없음</p></div>`;
+    document.getElementById('analysis-period-overlay').classList.add('show');
+}
+function closeAnalysisPeriodModal() { document.getElementById('analysis-period-overlay').classList.remove('show'); }
 
 // ── 유틸 ──
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
