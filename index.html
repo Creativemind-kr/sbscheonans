@@ -360,7 +360,15 @@
         .an-good { background: #D1FAE5; color: #065F46; }
         .analysis-chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; }
         .analysis-chart-title { font-size: .9rem; font-weight: 700; margin-bottom: 12px; }
-        .analysis-chart-wrap { position: relative; height: 160px; }
+        .analysis-chart-wrap { position: relative; height: 220px; }
+        .analysis-empty-chart { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .82rem; pointer-events: none; }
+        .analysis-row { cursor: pointer; border-radius: 6px; transition: background .12s; }
+        .analysis-row:hover { background: #F8FAFC; }
+        .unassigned-section { margin: 0 24px 16px; background: #FFFBEB; border: 1.5px dashed #FCD34D; border-radius: 12px; padding: 12px 16px; }
+        .unassigned-title { font-size: .83rem; font-weight: 700; color: #92400E; margin-bottom: 8px; }
+        .unassigned-item { font-size: .82rem; padding: 5px 0; border-bottom: 1px solid #FDE68A; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .unassigned-item:last-child { border-bottom: none; }
+        .done-elapsed { font-size: .72rem; color: var(--muted); background: #F1F5F9; padding: 1px 7px; border-radius: 4px; flex-shrink: 0; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -486,6 +494,12 @@
             </div>
         </div>
 
+        <!-- 미배정 업무 섹션 -->
+        <div id="unassigned-section" class="unassigned-section" style="display:none">
+            <div class="unassigned-title">⚠️ 미배정 업무 <span id="unassigned-count"></span></div>
+            <div id="unassigned-list"></div>
+        </div>
+
         <!-- 담당자 섹션 -->
         <div class="person-section">
             <div class="person-section-head">
@@ -549,6 +563,7 @@
                 <button class="af-btn" data-period="week" onclick="setAnalysisPeriod('week')">주별</button>
                 <button class="af-btn active" data-period="month" onclick="setAnalysisPeriod('month')">달별</button>
                 <button class="af-btn" data-period="year" onclick="setAnalysisPeriod('year')">연별</button>
+                <button class="btn btn-secondary btn-sm" onclick="exportAnalysis()" style="margin-left:auto;font-size:.8rem">📥 내보내기</button>
             </div>
             <div id="analysis-text-section"></div>
             <div id="analysis-charts-section"></div>
@@ -803,7 +818,7 @@ function saveMembers()      { db.doc('config/app').set({ members },      { merge
 function saveLinks()        { db.doc('config/app').set({ links },        { merge: true }); }
 function saveColOrder()     { db.doc('config/app').set({ colOrder },     { merge: true }); }
 function saveRoutineOrder() { db.doc('config/app').set({ routineOrder }, { merge: true }); }
-function saveMemberOrder()  { db.doc('config/app').set({ memberOrder },  { merge: true }); renderPersonSection(); }
+function saveMemberOrder()  { db.doc('config/app').set({ memberOrder },  { merge: true }); initPersonColors(); renderPersonSection(); }
 
 // ── 담당자 카드 드래그 순서 ──
 let personDragName = null;
@@ -881,6 +896,7 @@ function initKakao() {
     if (CFG.kakaoKey && window.Kakao && !Kakao.isInitialized()) Kakao.init(CFG.kakaoKey);
 }
 function renderAll() {
+    initPersonColors();
     renderStatsWidget();
     renderRoutineSection();
     renderBoard();
@@ -1264,7 +1280,6 @@ function renderPersonSection() {
     const grid = document.getElementById('person-grid');
     const allAssignees = getAllAssignees();
     const incomplete = tasks.filter(t => t.status !== '완료' && !t.isRoutine);
-    const avatarColors = ['#4F46E5','#0EA5E9','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#F97316'];
     updateAssigneeList();
     if (!allAssignees.length) {
         grid.innerHTML = `<div style="color:var(--muted);font-size:.85rem;padding:8px 0">업무에 담당자를 입력하면 여기에 자동으로 정리됩니다.</div>`;
@@ -1280,7 +1295,7 @@ function renderPersonSection() {
             const bD = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
             return aD - bD;
         });
-        const col = avatarColors[m.charCodeAt(0) % avatarColors.length];
+        const col = getPersonColor(m);
         return `<div class="person-card" data-person="${esc(m)}" draggable="true"
             ondragstart="personCardDragStart(event,'${esc(m)}')"
             ondragend="personCardDragEnd(event)">
@@ -1307,6 +1322,24 @@ function renderPersonSection() {
             </div>
         </div>`;
     }).join('');
+
+    // 미배정 업무 섹션
+    const unassigned = tasks.filter(t => t.status !== '완료' && !t.isRoutine && (!t.assignee || !t.assignee.trim()));
+    const usec = document.getElementById('unassigned-section');
+    if (usec) {
+        if (unassigned.length) {
+            usec.style.display = '';
+            document.getElementById('unassigned-count').textContent = `(${unassigned.length}건)`;
+            document.getElementById('unassigned-list').innerHTML = unassigned.map(t =>
+                `<div class="unassigned-item" onclick="openEdit('${t.id}')">
+                    <span>${esc(t.title)}</span>
+                    <span class="badge ${t.status==='작업중'?'badge-amber':'badge-red'}">${t.status}</span>
+                </div>`
+            ).join('');
+        } else {
+            usec.style.display = 'none';
+        }
+    }
 }
 
 function addMember() {
@@ -1378,15 +1411,19 @@ function applyDoneFilter() {
         const hdr = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${dowNames[d.getDay()]})`;
         html += `<div class="done-date-group">
             <div class="done-date-header"><span>${hdr}</span><span>${byDate[key].length}건</span></div>
-            ${byDate[key].map(t => `
-                <div class="done-item" onclick="openEdit('${t.id}')">
+            ${byDate[key].map(t => {
+                const days = t.createdAt ? Math.round((t.doneAt - t.createdAt) / 86400000) : null;
+                const elapsed = days !== null ? `<span class="done-elapsed">${days <= 0 ? '당일' : `${days}일 소요`}</span>` : '';
+                return `<div class="done-item" onclick="openEdit('${t.id}')">
                     <div class="done-item-info">
                         <div class="done-item-title">${esc(t.title)}</div>
                         ${t.desc     ? `<div class="done-item-sub">${esc(t.desc)}</div>` : ''}
                         ${t.assignee ? `<div class="done-item-sub">👤 ${esc(t.assignee)}</div>` : ''}
                     </div>
+                    ${elapsed}
                     <span class="badge" style="background:#D1FAE5;color:#065F46;flex-shrink:0">✓ 완료</span>
-                </div>`).join('')}
+                </div>`;
+            }).join('')}
         </div>`;
     });
     document.getElementById('done-list').innerHTML = html;
@@ -1936,6 +1973,24 @@ function addComment() {
     showToast('댓글 등록됨');
 }
 
+// ── 담당자 컬러 시스템 ──
+const PERSON_COLORS = {};
+const COLOR_PALETTE_P = ['#4F46E5','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#F97316','#06B6D4'];
+
+function initPersonColors() {
+    const ordered = memberOrder.length ? [...memberOrder] : [];
+    const all = getAllAssignees().filter(a => a !== '상시업무');
+    const rest = all.filter(a => !ordered.includes(a));
+    [...ordered, ...rest].forEach((name, i) => {
+        PERSON_COLORS[name] = COLOR_PALETTE_P[i % COLOR_PALETTE_P.length];
+    });
+}
+
+function getPersonColor(name) {
+    if (name === '상시업무') return '#8B5CF6';
+    return PERSON_COLORS[name] || '#4F46E5';
+}
+
 // ── 업무 분석 탭 ──
 let analysisPeriod = 'month';
 const chartRegistry = {};
@@ -2007,8 +2062,15 @@ function buildAnalysisTextSection() {
 
     // 상시업무 행
     const routineDone = periodTasks.filter(t => t.isRoutine);
+    const activeRoutineCount = tasks.filter(t => t.isRoutine && t.status !== '완료').length;
+    const routineBase = routineDone.length + activeRoutineCount;
+    const routineRate = routineBase > 0 ? Math.round(routineDone.length / routineBase * 100) : 0;
+    const routineRateTag = routineBase > 0
+        ? `<span class="an-tag ${routineRate >= 80 ? 'an-good' : routineRate >= 50 ? 'an-warn' : 'an-alert'}">${routineRate}% 처리율</span>`
+        : '';
     rows += buildAnalysisRow('🔄 상시업무', `${routineDone.length}건 처리`,
-        routineDone.length > 0 ? `<span class="an-tag an-warn">완료 ${routineDone.length}건</span>` : '—');
+        `${routineDone.length > 0 ? `<span class="an-tag an-warn">완료 ${routineDone.length}건</span>` : ''}${routineRateTag}` || '—',
+        '상시업무');
 
     // 담당자별 행
     persons.forEach(person => {
@@ -2037,7 +2099,7 @@ function buildAnalysisTextSection() {
         if (pt.length > 0 && tags.length === 0)
             tags.push(`<span class="an-tag an-good">정상</span>`);
 
-        rows += buildAnalysisRow(`👤 ${esc(person)}`, `${pt.length}건 처리`, tags.join('') || '—');
+        rows += buildAnalysisRow(`👤 ${esc(person)}`, `${pt.length}건 처리`, tags.join('') || '—', person);
     });
 
     document.getElementById('analysis-text-section').innerHTML = `
@@ -2047,49 +2109,85 @@ function buildAnalysisTextSection() {
         </div>`;
 }
 
-function buildAnalysisRow(name, count, notes) {
-    return `<div class="analysis-row">
+function buildAnalysisRow(name, count, notes, person) {
+    const onclick = person ? `onclick="scrollToChart('${person.replace(/'/g,"\\'")}')"` : '';
+    return `<div class="analysis-row" ${onclick}>
         <div class="analysis-person-name">${name}</div>
         <div class="analysis-count">${count}</div>
         <div class="analysis-notes">${notes}</div>
     </div>`;
 }
 
+function scrollToChart(person) {
+    const allPersons = ['상시업무', ...getAnalysisPersonOrder()];
+    const idx = allPersons.indexOf(person);
+    if (idx < 0) return;
+    const el = document.getElementById(`chart-card-${idx}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function buildAnalysisCharts() {
     Object.keys(chartRegistry).forEach(id => destroyChart(id));
     const persons = getAnalysisPersonOrder();
     const allPersons = ['상시업무', ...persons];
-    const colors = ['#8B5CF6','#4F46E5','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#F97316'];
 
     let html = '';
     allPersons.forEach((person, i) => {
-        html += `<div class="analysis-chart-card">
+        html += `<div class="analysis-chart-card" id="chart-card-${i}">
             <div class="analysis-chart-title">${person === '상시업무' ? '🔄' : '👤'} ${esc(person)}</div>
-            <div class="analysis-chart-wrap"><canvas id="chart-p${i}"></canvas></div>
+            <div class="analysis-chart-wrap">
+                <canvas id="chart-p${i}"></canvas>
+                <div class="analysis-empty-chart" id="empty-p${i}" style="display:none">이 기간 완료 업무 없음</div>
+            </div>
         </div>`;
     });
     document.getElementById('analysis-charts-section').innerHTML = html;
 
+    const now = new Date();
+    const _dn = ['일','월','화','수','목','금','토'];
+    const todayLabel = `${String(now.getDate()).padStart(2,'0')}(${_dn[now.getDay()]})`;
+
     allPersons.forEach((person, i) => {
         const chartId = `chart-p${i}`;
         const { labels, data, taskMap } = getChartPeriodData(person);
-        const color = colors[i % colors.length];
+        const color = getPersonColor(person);
         const canvas = document.getElementById(chartId);
         if (!canvas) return;
+
+        if (data.every(v => v === 0)) {
+            document.getElementById(`empty-p${i}`).style.display = 'flex';
+        }
+
+        const bgColors = labels.map(l => {
+            const lStr = Array.isArray(l) ? l[l.length-1] : l;
+            return (analysisPeriod === 'day' && lStr === todayLabel) ? color : color + '99';
+        });
+
+        const avg = data.length ? parseFloat((data.reduce((a,b)=>a+b,0)/data.length).toFixed(1)) : 0;
+
         chartRegistry[chartId] = new Chart(canvas.getContext('2d'), {
             type: 'bar',
             data: {
                 labels,
-                datasets: [{ label: person, data, backgroundColor: color + 'BB', borderColor: color, borderWidth: 1, borderRadius: 4 }]
+                datasets: [
+                    { label: person, data, backgroundColor: bgColors, borderColor: color, borderWidth: 1, borderRadius: 4 },
+                    { label: '평균', data: Array(labels.length).fill(avg), type: 'line', borderColor: '#94A3B8', borderWidth: 1.5, borderDash: [5,4], pointRadius: 0, fill: false, tension: 0 }
+                ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.raw}건` } } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: ctx => ctx.datasetIndex === 1 ? `평균 ${ctx.raw}건` : `${ctx.raw}건` } }
+                },
                 scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } },
                 onClick: (e, els) => {
                     if (!els.length) return;
-                    const idx = els[0].index;
-                    showAnalysisPeriodTasks(`${esc(person)} — ${labels[idx]}`, taskMap[idx] || []);
+                    const el = els[0];
+                    if (el.datasetIndex !== 0) return;
+                    const idx = el.index;
+                    const lbl = Array.isArray(labels[idx]) ? labels[idx].join(' ') : labels[idx];
+                    showAnalysisPeriodTasks(`${esc(person)} — ${lbl}`, taskMap[idx] || []);
                 }
             }
         });
@@ -2159,6 +2257,27 @@ function showAnalysisPeriodTasks(title, list) {
     document.getElementById('analysis-period-overlay').classList.add('show');
 }
 function closeAnalysisPeriodModal() { document.getElementById('analysis-period-overlay').classList.remove('show'); }
+
+function exportAnalysis() {
+    const completed = tasks.filter(t => t.status === '완료' && t.doneAt);
+    if (!completed.length) { showToast('완료된 업무가 없습니다.'); return; }
+    const rows = [['완료일', '업무명', '담당자', '유형', '소요일(등록→완료)']];
+    completed.sort((a,b) => b.doneAt - a.doneAt).forEach(t => {
+        const d = new Date(t.doneAt);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const days = t.createdAt ? Math.round((t.doneAt - t.createdAt) / 86400000) : '';
+        rows.push([dateStr, t.title, t.assignee || '', t.isRoutine ? '상시' : '일반', days]);
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const now = new Date();
+    a.download = `업무분석_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('CSV 내보내기 완료');
+}
 
 // ── 유틸 ──
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
