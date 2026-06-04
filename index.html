@@ -2080,18 +2080,6 @@ function buildAnalysisTextSection() {
 
     let rows = '';
 
-    // 상시업무 행
-    const routineDone = periodTasks.filter(t => t.isRoutine);
-    const activeRoutineCount = tasks.filter(t => t.isRoutine && t.status !== '완료').length;
-    const routineBase = routineDone.length + activeRoutineCount;
-    const routineRate = routineBase > 0 ? Math.round(routineDone.length / routineBase * 100) : 0;
-    const routineRateTag = routineBase > 0
-        ? `<span class="an-tag ${routineRate >= 80 ? 'an-good' : routineRate >= 50 ? 'an-warn' : 'an-alert'}">${routineRate}% 처리율</span>`
-        : '';
-    rows += buildAnalysisRow('🔄 상시업무', `${routineDone.length}건 처리`,
-        `${routineDone.length > 0 ? `<span class="an-tag an-warn">완료 ${routineDone.length}건</span>` : ''}${routineRateTag}` || '—',
-        '상시업무');
-
     // 담당자별 행
     persons.forEach(person => {
         const pt = allNonRoutine.filter(t => t.assignee === person);
@@ -2122,6 +2110,18 @@ function buildAnalysisTextSection() {
         rows += buildAnalysisRow(`👤 ${esc(person)}`, `${pt.length}건 처리`, tags.join('') || '—', person);
     });
 
+    // 상시업무 행 (최하단)
+    const routineDone = periodTasks.filter(t => t.isRoutine);
+    const activeRoutineCount = tasks.filter(t => t.isRoutine && t.status !== '완료').length;
+    const routineBase = routineDone.length + activeRoutineCount;
+    const routineRate = routineBase > 0 ? Math.round(routineDone.length / routineBase * 100) : 0;
+    const routineRateTag = routineBase > 0
+        ? `<span class="an-tag ${routineRate >= 80 ? 'an-good' : routineRate >= 50 ? 'an-warn' : 'an-alert'}">${routineRate}% 처리율</span>`
+        : '';
+    rows += buildAnalysisRow('🔄 상시업무', `${routineDone.length}건 처리`,
+        `${routineDone.length > 0 ? `<span class="an-tag an-warn">완료 ${routineDone.length}건</span>` : ''}${routineRateTag}` || '—',
+        '상시업무');
+
     document.getElementById('analysis-text-section').innerHTML = `
         <div class="analysis-text-card">
             <div class="analysis-text-title">📊 ${periodLabel}</div>
@@ -2139,7 +2139,7 @@ function buildAnalysisRow(name, count, notes, person) {
 }
 
 function scrollToChart(person) {
-    const allPersons = ['상시업무', ...getAnalysisPersonOrder()];
+    const allPersons = [...getAnalysisPersonOrder(), '상시업무'];
     const idx = allPersons.indexOf(person);
     if (idx < 0) return;
     const el = document.getElementById(`chart-card-${idx}`);
@@ -2149,7 +2149,7 @@ function scrollToChart(person) {
 function buildAnalysisCharts() {
     Object.keys(chartRegistry).forEach(id => destroyChart(id));
     const persons = getAnalysisPersonOrder();
-    const allPersons = ['상시업무', ...persons];
+    const allPersons = [...persons, '상시업무'];
 
     let html = '';
     allPersons.forEach((person, i) => {
