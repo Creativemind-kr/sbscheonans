@@ -103,6 +103,9 @@
         .routine-head-left { display: flex; align-items: center; gap: 8px; }
         .routine-head-title { font-weight: 700; font-size: .88rem; }
         .routine-count { background: #F1F5F9; color: var(--muted); padding: 2px 9px; border-radius: 20px; font-size: .76rem; font-weight: 700; }
+        .routine-rate-good { color: var(--green); font-weight: 700; }
+        .routine-rate-warn { color: var(--amber); font-weight: 700; }
+        .routine-rate-low  { color: var(--red);   font-weight: 700; }
         .routine-body { padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; min-height: 46px; align-items: flex-start; }
         .routine-item { display: inline-flex; align-items: center; gap: 6px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; transition: all .15s; cursor: grab; }
         .routine-item:hover { border-color: var(--primary); }
@@ -447,6 +450,7 @@
                 <div class="routine-head-left">
                     <span class="routine-head-title">🔄 상시 업무</span>
                     <span class="routine-count" id="routine-count">0</span>
+                    <span id="routine-rate" style="font-size:.76rem;color:var(--muted);display:none"></span>
                 </div>
                 <button class="btn btn-secondary btn-sm" onclick="openAddTask(true)">+ 추가</button>
             </div>
@@ -947,12 +951,18 @@ function renderRoutineSection() {
     const routines = tasks.filter(t => t.isRoutine);
     const cnt  = document.getElementById('routine-count');
     const body = document.getElementById('routine-body');
+    const rateEl = document.getElementById('routine-rate');
     if (cnt) cnt.textContent = routines.length;
     if (!body) return;
     if (!routines.length) {
         body.innerHTML = `<span class="routine-empty">상시 업무를 추가하면 여기에 표시됩니다. "+ 추가" 버튼을 눌러보세요.</span>`;
+        if (rateEl) rateEl.style.display = 'none';
         return;
     }
+
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayTs = todayStart.getTime();
+
     const order = routineOrder.length ? routineOrder : [];
     routines.sort((a, b) => {
         const ai = order.indexOf(a.id), bi = order.indexOf(b.id);
@@ -961,8 +971,18 @@ function renderRoutineSection() {
         if (bi !== -1) return 1;
         return (a.createdAt || 0) - (b.createdAt || 0);
     });
+
+    const doneToday = routines.filter(t => t.status === '완료' && t.doneAt >= todayTs).length;
+    const total = routines.length;
+    const rate = total > 0 ? Math.round(doneToday / total * 100) : 0;
+    if (rateEl) {
+        const cls = rate >= 80 ? 'routine-rate-good' : rate >= 50 ? 'routine-rate-warn' : 'routine-rate-low';
+        rateEl.style.display = '';
+        rateEl.innerHTML = `· <span class="${cls}">${doneToday}/${total} 처리 (${rate}%)</span>`;
+    }
+
     body.innerHTML = routines.map(t => {
-        const done = t.status === '완료';
+        const done = t.status === '완료' && t.doneAt >= todayTs;
         return `<div class="routine-item${done ? ' done' : ''}" data-id="${t.id}" draggable="true"
             ondragstart="routineDragStart(event,'${t.id}')"
             ondragend="routineDragEnd(event)">
