@@ -278,6 +278,11 @@
         .checkbox-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; }
         .checkbox-row label { font-size: .88rem; font-weight: 500; cursor: pointer; }
 
+        /* 멘션 태그 */
+        .mention-tag { color: var(--primary); font-weight: 700; background: #EEF2FF; padding: 1px 4px; border-radius: 3px; }
+        .feed-item.clickable { cursor: pointer; border-radius: 8px; transition: background .12s; }
+        .feed-item.clickable:hover { background: #F8FAFC; }
+
         /* Toast */
         .toast { position: fixed; bottom: 24px; right: 24px; background: #1E293B; color: #fff; padding: 11px 18px; border-radius: 9px; font-size: .85rem; z-index: 200; opacity: 0; transform: translateY(8px); transition: all .25s; pointer-events: none; }
         .toast.show { opacity: 1; transform: translateY(0); }
@@ -1929,16 +1934,18 @@ function renderFeedTab() {
         wrap.innerHTML = `<div class="empty-state"><div class="ei">📭</div><p>아직 활동 내역이 없습니다.</p></div>`;
         return;
     }
-    const icons  = { task_add: '✚', status: '↪', task_del: '✕', comment: '💬', routine_toggle: '🔄' };
-    const colors = { task_add: '#EEF2FF', status: '#FEF3C7', task_del: '#FEE2E2', comment: '#F0FDF4', routine_toggle: '#F0F9FF' };
-    wrap.innerHTML = activity.map(a => `
-        <div class="feed-item">
+    const icons  = { task_add: '✚', status: '↪', task_del: '✕', comment: '💬', routine_toggle: '🔄', mention: '🔔' };
+    const colors = { task_add: '#EEF2FF', status: '#FEF3C7', task_del: '#FEE2E2', comment: '#F0FDF4', routine_toggle: '#F0F9FF', mention: '#FDF4FF' };
+    wrap.innerHTML = activity.map(a => {
+        const clickable = a.type === 'mention' && a.taskId;
+        return `<div class="feed-item${clickable ? ' clickable' : ''}"${clickable ? ` onclick="openEdit('${a.taskId}')"` : ''}>
             <div class="feed-icon" style="background:${colors[a.type]||'#F8FAFC'}">${icons[a.type]||'•'}</div>
             <div class="feed-body">
                 <div class="feed-text">${buildFeedText(a)}</div>
                 <div class="feed-time">${timeAgo(a.createdAt)}</div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 function buildFeedText(a) {
@@ -1948,6 +1955,14 @@ function buildFeedText(a) {
     if (a.type === 'task_del')       return `${t} 삭제됨`;
     if (a.type === 'comment')        return `${t}<br><span style="color:var(--muted);font-size:.8rem">${esc(a.detail)}</span>`;
     if (a.type === 'routine_toggle') return `🔄 ${t} → <span style="font-weight:600">${esc(a.detail)}</span>`;
+    if (a.type === 'mention') {
+        try {
+            const d = JSON.parse(a.detail);
+            const tags = d.mentions.map(m => `<span class="mention-tag">@${esc(m)}</span>`).join(' ');
+            const preview = d.text ? `<br><span style="color:var(--muted);font-size:.8rem">"${esc(d.text)}${d.text.length >= 60 ? '…' : ''}"</span>` : '';
+            return `<strong>${esc(d.author)}</strong> → ${tags} 멘션 · <span style="color:var(--muted);font-size:.8rem">${esc(a.taskTitle)}</span>${preview}`;
+        } catch(e) { return esc(a.detail || ''); }
+    }
     return esc(a.detail || '');
 }
 
@@ -1961,6 +1976,10 @@ function timeAgo(ts) {
 }
 
 // ── 댓글 ──
+function mentionify(text) {
+    return esc(text).replace(/@(\S+)/g, '<span class="mention-tag">@$1</span>');
+}
+
 function renderComments(comments) {
     const el = document.getElementById('comment-list');
     if (!el) return;
@@ -1974,7 +1993,7 @@ function renderComments(comments) {
                 <span class="comment-author">${esc(c.author || '익명')}</span>
                 <span class="comment-time">${timeAgo(c.createdAt)}</span>
             </div>
-            <div class="comment-text">${esc(c.text)}</div>
+            <div class="comment-text">${mentionify(c.text)}</div>
         </div>`).join('');
     el.scrollTop = el.scrollHeight;
 }
@@ -1989,6 +2008,11 @@ function addComment() {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     db.collection('comments').doc(id).set({ id, taskId: editId, author, text, createdAt: Date.now() });
     logActivity('comment', editId, task ? task.title : '', `${author}: ${text.slice(0,40)}${text.length>40?'…':''}`);
+    const mentions = [...new Set((text.match(/@(\S+)/g) || []).map(m => m.slice(1)))];
+    if (mentions.length) {
+        logActivity('mention', editId, task ? task.title : '',
+            JSON.stringify({ author, mentions, text: text.slice(0, 60) }));
+    }
     document.getElementById('c-text').value = '';
     showToast('댓글 등록됨');
 }
