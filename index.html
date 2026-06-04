@@ -283,6 +283,15 @@
         .feed-item.clickable { cursor: pointer; border-radius: 8px; transition: background .12s; }
         .feed-item.clickable:hover { background: #F8FAFC; }
 
+        /* 멘션 알림 배너 */
+        .mention-banner { display: none; background: #F5F3FF; border-bottom: 2px solid #8B5CF6; padding: 10px 24px; flex-direction: column; gap: 8px; }
+        .mention-banner.show { display: flex; }
+        .mention-banner-top { display: flex; align-items: center; gap: 12px; }
+        .mention-banner .banner-text { color: #5B21B6; flex: 1; font-size: .875rem; }
+        .mention-items { display: flex; flex-wrap: wrap; gap: 8px; padding-left: 24px; }
+        .mention-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: .78rem; font-weight: 500; background: #EDE9FE; color: #6D28D9; cursor: pointer; transition: background .12s; }
+        .mention-chip:hover { background: #DDD6FE; }
+
         /* Toast */
         .toast { position: fixed; bottom: 24px; right: 24px; background: #1E293B; color: #fff; padding: 11px 18px; border-radius: 9px; font-size: .85rem; z-index: 200; opacity: 0; transform: translateY(8px); transition: all .25s; pointer-events: none; }
         .toast.show { opacity: 1; transform: translateY(0); }
@@ -429,6 +438,19 @@
             <button class="btn btn-kakao btn-sm" onclick="shareKakao()">카카오톡 공유</button>
             <button class="btn btn-secondary btn-sm" onclick="dismissBanner()">닫기</button>
         </div>
+    </div>
+
+    <!-- 멘션 알림 배너 -->
+    <div class="mention-banner" id="mention-banner">
+        <div class="mention-banner-top">
+            <span>💬</span>
+            <div class="banner-text" id="mention-banner-text"></div>
+            <div class="banner-actions">
+                <button class="btn btn-secondary btn-sm" onclick="goToFeedFromMention()">피드 보기</button>
+                <button class="btn btn-secondary btn-sm" onclick="dismissMentionBanner()">닫기</button>
+            </div>
+        </div>
+        <div class="mention-items" id="mention-items"></div>
     </div>
 
     <!-- 마감 임박 배너 -->
@@ -818,8 +840,10 @@ function loadData() {
         updateAssigneeList();
         renderAll();
     });
+    let mentionBannerChecked = false;
     db.collection('activity').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
         activity = snapshot.docs.map(d => d.data());
+        if (!mentionBannerChecked) { mentionBannerChecked = true; checkMentionBanner(); }
         if (activeTab === 'feed') renderFeedTab();
     });
 }
@@ -1065,6 +1089,41 @@ function checkDeadlineBanner() {
 }
 function dismissDeadlineBanner() {
     document.getElementById('deadline-banner').classList.remove('show');
+}
+
+// ── 멘션 알림 배너 ──
+function checkMentionBanner() {
+    const seenIds = JSON.parse(localStorage.getItem('seen_mention_ids') || '[]');
+    const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+    const unseen = activity.filter(a =>
+        a.type === 'mention' && !seenIds.includes(a.id) && a.createdAt > cutoff
+    );
+    if (!unseen.length) return;
+    const plural = unseen.length > 1 ? `${unseen.length}건` : '';
+    document.getElementById('mention-banner-text').innerHTML =
+        `<strong>💬 새 멘션 알림 ${plural}</strong> — 클릭하면 해당 업무로 이동합니다`;
+    document.getElementById('mention-items').innerHTML = unseen.map(a => {
+        try {
+            const d = JSON.parse(a.detail);
+            const tags = d.mentions.map(m => `<span class="mention-tag">@${esc(m)}</span>`).join(' ');
+            return `<span class="mention-chip" onclick="openEdit('${a.taskId}');dismissMentionBanner()">
+                ${esc(d.author)} → ${tags} · <em style="font-style:normal;opacity:.75">${esc(a.taskTitle)}</em>
+            </span>`;
+        } catch(e) { return ''; }
+    }).filter(Boolean).join('');
+    document.getElementById('mention-banner').classList.add('show');
+}
+
+function dismissMentionBanner() {
+    const seenIds = JSON.parse(localStorage.getItem('seen_mention_ids') || '[]');
+    const newSeen = [...new Set([...seenIds, ...activity.filter(a => a.type === 'mention').map(a => a.id)])];
+    localStorage.setItem('seen_mention_ids', JSON.stringify(newSeen.slice(-300)));
+    document.getElementById('mention-banner').classList.remove('show');
+}
+
+function goToFeedFromMention() {
+    dismissMentionBanner();
+    switchTab('feed');
 }
 
 // ── 칸반 보드 ──
