@@ -446,7 +446,6 @@
             <span>💬</span>
             <div class="banner-text" id="mention-banner-text"></div>
             <div class="banner-actions">
-                <button class="btn btn-secondary btn-sm" onclick="goToFeedFromMention()">피드 보기</button>
                 <button class="btn btn-secondary btn-sm" onclick="dismissMentionBanner()">닫기</button>
             </div>
         </div>
@@ -1093,20 +1092,17 @@ function dismissDeadlineBanner() {
 
 // ── 멘션 알림 배너 ──
 function checkMentionBanner() {
-    const seenIds = JSON.parse(localStorage.getItem('seen_mention_ids') || '[]');
     const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
-    const unseen = activity.filter(a =>
-        a.type === 'mention' && !seenIds.includes(a.id) && a.createdAt > cutoff
-    );
-    if (!unseen.length) return;
-    const plural = unseen.length > 1 ? `${unseen.length}건` : '';
+    const mentions = activity.filter(a => a.type === 'mention' && a.createdAt > cutoff);
+    if (!mentions.length) return;
+    const plural = mentions.length > 1 ? `${mentions.length}건` : '';
     document.getElementById('mention-banner-text').innerHTML =
-        `<strong>💬 새 멘션 알림 ${plural}</strong> — 클릭하면 해당 업무로 이동합니다`;
-    document.getElementById('mention-items').innerHTML = unseen.map(a => {
+        `<strong>멘션 알림 ${plural}</strong> — 항목을 클릭하면 해당 업무로 이동합니다`;
+    document.getElementById('mention-items').innerHTML = mentions.map(a => {
         try {
             const d = JSON.parse(a.detail);
             const tags = d.mentions.map(m => `<span class="mention-tag">@${esc(m)}</span>`).join(' ');
-            return `<span class="mention-chip" onclick="openEdit('${a.taskId}');dismissMentionBanner()">
+            return `<span class="mention-chip" onclick="openEdit('${a.taskId}')">
                 ${esc(d.author)} → ${tags} · <em style="font-style:normal;opacity:.75">${esc(a.taskTitle)}</em>
             </span>`;
         } catch(e) { return ''; }
@@ -1115,15 +1111,7 @@ function checkMentionBanner() {
 }
 
 function dismissMentionBanner() {
-    const seenIds = JSON.parse(localStorage.getItem('seen_mention_ids') || '[]');
-    const newSeen = [...new Set([...seenIds, ...activity.filter(a => a.type === 'mention').map(a => a.id)])];
-    localStorage.setItem('seen_mention_ids', JSON.stringify(newSeen.slice(-300)));
     document.getElementById('mention-banner').classList.remove('show');
-}
-
-function goToFeedFromMention() {
-    dismissMentionBanner();
-    switchTab('feed');
 }
 
 // ── 칸반 보드 ──
