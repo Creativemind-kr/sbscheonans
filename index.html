@@ -2247,7 +2247,7 @@ function buildAnalysisCharts() {
     const _dn = ['일','월','화','수','목','금','토'];
     const todayLabel = `${String(now.getDate()).padStart(2,'0')}(${_dn[now.getDay()]})`;
 
-    allPersons.forEach((person, i) => {
+    persons.forEach((person, i) => {
         const chartId = `chart-p${i}`;
         const { labels, data, taskMap } = getChartPeriodData(person);
         const color = getPersonColor(person);
