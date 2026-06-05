@@ -1093,7 +1093,16 @@ function dismissDeadlineBanner() {
 // ── 멘션 알림 배너 ──
 function checkMentionBanner() {
     const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
-    const mentions = activity.filter(a => a.type === 'mention' && a.createdAt > cutoff);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const mentions = activity.filter(a => {
+        if (a.type !== 'mention' || a.createdAt <= cutoff) return false;
+        const task = tasks.find(t => t.id === a.taskId);
+        if (task && task.status === '완료') {
+            const due = task.dueDate ? new Date(task.dueDate) : null;
+            if (!due || due < today) return false;
+        }
+        return true;
+    });
     if (!mentions.length) return;
     const plural = mentions.length > 1 ? `${mentions.length}건` : '';
     document.getElementById('mention-banner-text').innerHTML =
