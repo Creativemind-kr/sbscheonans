@@ -2200,7 +2200,7 @@ function buildAnalysisTextSection() {
         : '';
     rows += buildAnalysisRow('🔄 상시업무', `${routineDone.length}건 처리`,
         `${routineDone.length > 0 ? `<span class="an-tag an-warn">완료 ${routineDone.length}건</span>` : ''}${routineRateTag}` || '—',
-        '상시업무');
+        null);
 
     document.getElementById('analysis-text-section').innerHTML = `
         <div class="analysis-text-card">
@@ -2219,7 +2219,7 @@ function buildAnalysisRow(name, count, notes, person) {
 }
 
 function scrollToChart(person) {
-    const allPersons = [...getAnalysisPersonOrder(), '상시업무'];
+    const allPersons = getAnalysisPersonOrder();
     const idx = allPersons.indexOf(person);
     if (idx < 0) return;
     const el = document.getElementById(`chart-card-${idx}`);
@@ -2229,10 +2229,8 @@ function scrollToChart(person) {
 function buildAnalysisCharts() {
     Object.keys(chartRegistry).forEach(id => destroyChart(id));
     const persons = getAnalysisPersonOrder();
-    const allPersons = [...persons, '상시업무'];
-
     let html = '';
-    allPersons.forEach((person, i) => {
+    persons.forEach((person, i) => {
         html += `<div class="analysis-chart-card" id="chart-card-${i}">
             <div class="analysis-chart-title">${person === '상시업무' ? '🔄' : '👤'} ${esc(person)}</div>
             <div class="analysis-chart-wrap">
