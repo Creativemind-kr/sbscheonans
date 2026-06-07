@@ -120,6 +120,32 @@
         .routine-edit-btn { background: none; border: none; font-size: .72rem; color: #CBD5E1; cursor: pointer; padding: 2px 4px; border-radius: 4px; flex-shrink: 0; transition: color .15s; }
         .routine-edit-btn:hover { color: var(--primary); }
         .routine-empty { color: var(--muted); font-size: .82rem; padding: 4px 2px; }
+        /* 2-panel layout */
+        .routine-content { display: flex; align-items: stretch; }
+        .routine-list-panel { flex: 0 0 260px; border-right: 1px solid var(--border); overflow-y: auto; max-height: 220px; }
+        .routine-cal-panel { flex: 1; padding: 12px 16px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+        @media (max-width: 640px) {
+            .routine-content { flex-direction: column; }
+            .routine-list-panel { flex: none; max-height: 160px; border-right: none; border-bottom: 1px solid var(--border); }
+        }
+        /* Routine calendar */
+        .rc-legend { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .rc-legend-item { display: inline-flex; align-items: center; gap: 4px; font-size: .7rem; color: var(--muted); }
+        .rc-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .rc-week { display: flex; gap: 5px; }
+        .rc-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .rc-day-name { font-size: .66rem; font-weight: 700; color: var(--muted); }
+        .rc-day.weekend .rc-day-name { color: #EF4444; }
+        .rc-date-num { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: .74rem; font-weight: 700; color: var(--text); }
+        .rc-day.today .rc-date-num { background: var(--primary); color: #fff; }
+        .rc-day.weekend.today .rc-date-num { background: #EF4444; color: #fff; }
+        .rc-bar { width: 100%; height: 34px; border-radius: 7px; overflow: hidden; display: flex; gap: 1.5px; background: #E2E8F0; }
+        .rc-seg { flex: 1; transition: filter .12s; }
+        .rc-seg:hover { filter: brightness(1.12); cursor: pointer; }
+        .rc-seg.done { opacity: 1; }
+        .rc-seg.undone { opacity: .18; }
+        .rc-seg.future { opacity: .1; }
+        .rc-day.today .rc-bar { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 7px; }
 
         /* ── 보드 탭 ── */
         .board-wrap { padding: 14px 24px 0; }
@@ -482,11 +508,18 @@
                 </div>
                 <button class="btn btn-secondary btn-sm" onclick="openAddTask(true)">+ 추가</button>
             </div>
-            <div class="routine-body" id="routine-body"
-                ondragover="routineDragOver(event)"
-                ondragleave="routineDragLeave(event)"
-                ondrop="routineDrop(event)">
-                <span class="routine-empty">상시 업무를 추가하면 여기에 표시됩니다.</span>
+            <div class="routine-content">
+                <div class="routine-list-panel">
+                    <div class="routine-body" id="routine-body"
+                        ondragover="routineDragOver(event)"
+                        ondragleave="routineDragLeave(event)"
+                        ondrop="routineDrop(event)">
+                        <span class="routine-empty">상시 업무를 추가하면 여기에 표시됩니다.</span>
+                    </div>
+                </div>
+                <div class="routine-cal-panel">
+                    <div id="routine-calendar"></div>
+                </div>
             </div>
         </div>
 
@@ -987,6 +1020,7 @@ function renderRoutineSection() {
     if (!routines.length) {
         body.innerHTML = `<span class="routine-empty">상시 업무를 추가하면 여기에 표시됩니다. "+ 추가" 버튼을 눌러보세요.</span>`;
         if (rateEl) rateEl.style.display = 'none';
+        renderRoutineCalendar();
         return;
     }
 
@@ -1024,6 +1058,72 @@ function renderRoutineSection() {
             <button class="routine-edit-btn" onclick="openEdit('${t.id}')" title="수정">✎</button>
         </div>`;
     }).join('');
+    renderRoutineCalendar();
+}
+
+function renderRoutineCalendar() {
+    const cal = document.getElementById('routine-calendar');
+    if (!cal) return;
+
+    const routines = tasks.filter(t => t.isRoutine);
+    if (!routines.length) {
+        cal.innerHTML = '<div style="padding:6px 0;color:var(--muted);font-size:.82rem">업무를 추가하면 캘린더에 표시됩니다.</div>';
+        return;
+    }
+
+    const order = routineOrder.length ? routineOrder : [];
+    const sorted = [...routines].sort((a, b) => {
+        const ai = order.indexOf(a.id), bi = order.indexOf(b.id);
+        if (ai !== -1 && bi !== -1) return ai - bi;
+        if (ai !== -1) return -1; if (bi !== -1) return 1;
+        return (a.createdAt||0) - (b.createdAt||0);
+    });
+
+    const shown = sorted.slice(0, 5);
+    const extra = sorted.length - shown.length;
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayTs = today.getTime();
+    const dow = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+
+    const days = Array.from({length: 7}, (_, i) => {
+        const d = new Date(monday); d.setDate(monday.getDate() + i); return d;
+    });
+    const dayNames = ['월','화','수','목','금','토','일'];
+
+    const assignees = [...new Set(shown.map(t => t.assignee).filter(Boolean))];
+    const legendHtml = `<div class="rc-legend">${
+        assignees.map(a => `<span class="rc-legend-item"><span class="rc-legend-dot" style="background:${getPersonColor(a)}"></span>${esc(a)}</span>`).join('')
+    }${extra > 0 ? `<span class="rc-legend-item" style="margin-left:4px">+${extra}건 더</span>` : ''}</div>`;
+
+    const weekHtml = `<div class="rc-week">${days.map((d, di) => {
+        const isToday  = d.getTime() === todayTs;
+        const isFuture = d.getTime() > todayTs;
+        const isWeekend = di >= 5;
+        const dayStart = d.getTime();
+        const dayEnd   = dayStart + 86399999;
+
+        const segs = shown.map(t => {
+            const color = getPersonColor(t.assignee || '');
+            let cls;
+            if (isFuture) {
+                cls = 'future';
+            } else {
+                cls = (t.doneAt && t.doneAt >= dayStart && t.doneAt <= dayEnd) ? 'done' : 'undone';
+            }
+            return `<div class="rc-seg ${cls}" style="background:${color}" title="${esc(t.title)}${t.assignee ? ' · '+esc(t.assignee) : ''}" onclick="toggleRoutine('${t.id}')"></div>`;
+        }).join('');
+
+        return `<div class="rc-day${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}">
+            <div class="rc-day-name">${dayNames[di]}</div>
+            <div class="rc-date-num">${d.getDate()}</div>
+            <div class="rc-bar">${segs}</div>
+        </div>`;
+    }).join('')}</div>`;
+
+    cal.innerHTML = legendHtml + weekHtml;
 }
 
 function toggleRoutine(id) {
