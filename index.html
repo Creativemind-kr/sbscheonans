@@ -256,7 +256,11 @@
         .links-section { margin: 0 24px 28px; }
         .links-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
         .links-section-title { font-size: .95rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-        .links-grid { display: flex; flex-direction: column; gap: 7px; }
+        .links-grid { }
+        .links-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 700px) { .links-cols { grid-template-columns: 1fr; } }
+        .links-col-head { font-size: .76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+        .links-col { display: flex; flex-direction: column; gap: 7px; }
         .link-item { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 10px 14px; transition: border-color .2s, box-shadow .2s; }
         .link-item:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(79,70,229,.08); }
         .link-info { flex: 1; min-width: 0; }
@@ -772,6 +776,13 @@
 <div class="overlay" id="link-overlay" onclick="if(event.target===this)closeLinkModal()">
     <div class="modal">
         <h2>🔗 링크 추가</h2>
+        <div class="form-row">
+            <label>분류</label>
+            <select id="l-category">
+                <option value="참고사이트">작업 참고 사이트</option>
+                <option value="관리시트">관리용 시트</option>
+            </select>
+        </div>
         <div class="form-row">
             <label>링크 제목 *</label>
             <input id="l-title" type="text" placeholder="예: 구글 스프레드시트">
@@ -1869,17 +1880,35 @@ function renderLinksSection() {
         grid.innerHTML = `<div style="color:var(--muted);font-size:.85rem;padding:6px 0">참고할 링크를 추가해보세요.</div>`;
         return;
     }
-    grid.innerHTML = links.map(l => `
-        <div class="link-item">
-            <div class="link-info">
-                <div class="link-title">${esc(l.title)}</div>
-                <div class="link-url">${esc(l.url)}</div>
-            </div>
-            <div class="link-actions">
-                <button class="link-open" onclick="openLink('${esc(l.id)}')">열기</button>
-                <button class="link-del" onclick="removeLink('${esc(l.id)}')" title="삭제">✕</button>
-            </div>
-        </div>`).join('');
+
+    const refLinks = links.filter(l => !l.category || l.category === '참고사이트');
+    const mgtLinks = links.filter(l => l.category === '관리시트');
+
+    function renderCol(items) {
+        if (!items.length) return `<div style="color:var(--muted);font-size:.8rem;padding:4px 0">없음</div>`;
+        return items.map(l => `
+            <div class="link-item">
+                <div class="link-info">
+                    <div class="link-title">${esc(l.title)}</div>
+                    <div class="link-url">${esc(l.url)}</div>
+                </div>
+                <div class="link-actions">
+                    <button class="link-open" onclick="openLink('${esc(l.id)}')">열기</button>
+                    <button class="link-del" onclick="removeLink('${esc(l.id)}')" title="삭제">✕</button>
+                </div>
+            </div>`).join('');
+    }
+
+    grid.innerHTML = `<div class="links-cols">
+        <div>
+            <div class="links-col-head">작업 참고 사이트</div>
+            <div class="links-col">${renderCol(refLinks)}</div>
+        </div>
+        <div>
+            <div class="links-col-head">관리용 시트</div>
+            <div class="links-col">${renderCol(mgtLinks)}</div>
+        </div>
+    </div>`;
 }
 
 function openLink(id) {
@@ -1887,6 +1916,7 @@ function openLink(id) {
     if (l) window.open(l.url, '_blank', 'noopener');
 }
 function openAddLink() {
+    document.getElementById('l-category').value = '참고사이트';
     document.getElementById('l-title').value = '';
     document.getElementById('l-url').value = '';
     document.getElementById('link-overlay').classList.add('show');
@@ -1894,12 +1924,13 @@ function openAddLink() {
 }
 function closeLinkModal() { document.getElementById('link-overlay').classList.remove('show'); }
 function saveLink() {
-    const title = document.getElementById('l-title').value.trim();
+    const title    = document.getElementById('l-title').value.trim();
+    const category = document.getElementById('l-category').value;
     let url = document.getElementById('l-url').value.trim();
     if (!title) { showToast('링크 제목을 입력하세요.'); return; }
     if (!url)   { showToast('URL을 입력하세요.'); return; }
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-    links.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title, url });
+    links.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title, url, category });
     saveLinks(); closeLinkModal(); showToast(`${title} 추가됨`);
 }
 function removeLink(id) {
