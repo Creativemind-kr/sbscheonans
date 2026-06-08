@@ -129,23 +129,29 @@
             .routine-list-panel { flex: none; max-height: 160px; border-right: none; border-bottom: 1px solid var(--border); }
         }
         /* Routine calendar */
-        .rc-legend { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .rc-legend { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
         .rc-legend-item { display: inline-flex; align-items: center; gap: 4px; font-size: .7rem; color: var(--muted); }
         .rc-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
         .rc-week { display: flex; gap: 5px; }
         .rc-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .rc-day-name { font-size: .66rem; font-weight: 700; color: var(--muted); }
-        .rc-day.weekend .rc-day-name { color: #EF4444; }
         .rc-date-num { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: .74rem; font-weight: 700; color: var(--text); }
-        .rc-day.today .rc-date-num { background: var(--primary); color: #fff; }
-        .rc-day.weekend.today .rc-date-num { background: #EF4444; color: #fff; }
-        .rc-bar { width: 100%; height: 34px; border-radius: 7px; overflow: hidden; display: flex; gap: 1.5px; background: #E2E8F0; }
-        .rc-seg { flex: 1; transition: filter .12s; }
-        .rc-seg:hover { filter: brightness(1.12); cursor: pointer; }
-        .rc-seg.done { opacity: 1; }
-        .rc-seg.undone { opacity: .18; }
-        .rc-seg.future { opacity: .1; }
-        .rc-day.today .rc-bar { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 7px; }
+        /* Today block (top) */
+        .rc-today-block { margin-bottom: 8px; }
+        .rc-today-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+        .rc-today-tag { font-size: .68rem; font-weight: 800; color: var(--primary); letter-spacing: .04em; }
+        .rc-today-dn { font-size: .68rem; font-weight: 700; color: var(--muted); }
+        .rc-today-date { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--primary); color: #fff; font-size: .72rem; font-weight: 800; }
+        /* Bars */
+        .rc-bar-lg { width: 100%; height: 46px; border-radius: 8px; overflow: hidden; display: flex; gap: 1.5px; background: #E2E8F0; }
+        .rc-bar-sm { width: 100%; height: 28px; border-radius: 6px; overflow: hidden; display: flex; gap: 1px; background: #E2E8F0; }
+        /* Segments with label */
+        .rc-seg-lbl { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0 2px; transition: filter .12s; cursor: pointer; }
+        .rc-seg-lbl:hover { filter: brightness(1.12); }
+        .rc-seg-lbl.done { opacity: 1; }
+        .rc-seg-lbl.undone { opacity: .22; }
+        .rc-seg-lbl.future { opacity: .11; }
+        .rc-seg-lbl span { font-size: .59rem; font-weight: 700; color: rgba(255,255,255,.93); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; pointer-events: none; }
 
         /* ── 보드 탭 ── */
         .board-wrap { padding: 14px 24px 0; }
@@ -1081,7 +1087,7 @@ function renderRoutineCalendar() {
         return (a.createdAt||0) - (b.createdAt||0);
     });
 
-    const shown = sorted.slice(0, 5);
+    const shown = sorted.slice(0, 6);
     const extra = sorted.length - shown.length;
 
     const today = new Date(); today.setHours(0,0,0,0);
@@ -1094,37 +1100,66 @@ function renderRoutineCalendar() {
         const d = new Date(monday); d.setDate(monday.getDate() + i); return d;
     });
     const dayNames = ['월','화','수','목','금'];
+    const isWeekend = dow === 0 || dow === 6;
 
+    // Build bar segments for a given day
+    function makeBar(d, isLarge) {
+        const isFuture = d.getTime() > todayTs;
+        const dayStart = d.getTime();
+        const dayEnd   = dayStart + 86399999;
+        const segs = shown.map(t => {
+            const color = getPersonColor(t.assignee || '');
+            let cls;
+            if (isFuture) cls = 'future';
+            else cls = (t.doneAt && t.doneAt >= dayStart && t.doneAt <= dayEnd) ? 'done' : 'undone';
+            const short = t.title.length > 6 ? t.title.slice(0, 5) + '…' : t.title;
+            const lbl = (isLarge || shown.length <= 3) ? `<span>${esc(short)}</span>` : '';
+            return `<div class="rc-seg-lbl ${cls}" style="background:${color}" title="${esc(t.title)}${t.assignee ? ' · '+esc(t.assignee) : ''}" onclick="toggleRoutine('${t.id}')">${lbl}</div>`;
+        }).join('');
+        return `<div class="${isLarge ? 'rc-bar-lg' : 'rc-bar-sm'}">${segs}</div>`;
+    }
+
+    // Legend
     const assignees = [...new Set(shown.map(t => t.assignee).filter(Boolean))];
     const legendHtml = `<div class="rc-legend">${
         assignees.map(a => `<span class="rc-legend-item"><span class="rc-legend-dot" style="background:${getPersonColor(a)}"></span>${esc(a)}</span>`).join('')
     }${extra > 0 ? `<span class="rc-legend-item" style="margin-left:4px">+${extra}건 더</span>` : ''}</div>`;
 
-    const weekHtml = `<div class="rc-week">${days.map((d, di) => {
-        const isToday  = d.getTime() === todayTs;
-        const isFuture = d.getTime() > todayTs;
-        const dayStart = d.getTime();
-        const dayEnd   = dayStart + 86399999;
+    let html = '';
 
-        const segs = shown.map(t => {
-            const color = getPersonColor(t.assignee || '');
-            let cls;
-            if (isFuture) {
-                cls = 'future';
-            } else {
-                cls = (t.doneAt && t.doneAt >= dayStart && t.doneAt <= dayEnd) ? 'done' : 'undone';
-            }
-            return `<div class="rc-seg ${cls}" style="background:${color}" title="${esc(t.title)}${t.assignee ? ' · '+esc(t.assignee) : ''}" onclick="toggleRoutine('${t.id}')"></div>`;
-        }).join('');
+    if (!isWeekend) {
+        // Today block at top (large)
+        const todayIdx = days.findIndex(d => d.getTime() === todayTs);
+        const todayDayName = todayIdx >= 0 ? dayNames[todayIdx] : '';
+        html += `<div class="rc-today-block">
+            <div class="rc-today-hdr">
+                <span class="rc-today-tag">오늘</span>
+                <span class="rc-today-dn">${todayDayName}</span>
+                <div class="rc-today-date">${today.getDate()}</div>
+            </div>
+            ${makeBar(today, true)}
+        </div>`;
 
-        return `<div class="rc-day${isToday ? ' today' : ''}">
+        // Other 4 weekdays below (small)
+        const others = days.filter(d => d.getTime() !== todayTs);
+        html += `<div class="rc-week">${others.map(d => {
+            const di = days.indexOf(d);
+            return `<div class="rc-day">
+                <div class="rc-day-name">${dayNames[di]}</div>
+                <div class="rc-date-num">${d.getDate()}</div>
+                ${makeBar(d, false)}
+            </div>`;
+        }).join('')}</div>`;
+    } else {
+        // Weekend: show all 5 weekdays in a row (no today block)
+        html += `<div class="rc-week">${days.map((d, di) => `<div class="rc-day">
             <div class="rc-day-name">${dayNames[di]}</div>
             <div class="rc-date-num">${d.getDate()}</div>
-            <div class="rc-bar">${segs}</div>
-        </div>`;
-    }).join('')}</div>`;
+            ${makeBar(d, false)}
+        </div>`).join('')}</div>`;
+    }
 
-    cal.innerHTML = legendHtml + weekHtml;
+    cal.innerHTML = html + legendHtml;
 }
 
 function toggleRoutine(id) {
