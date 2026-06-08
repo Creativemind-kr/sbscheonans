@@ -776,10 +776,11 @@
     </div>
 </div>
 
-<!-- 링크 추가 모달 -->
+<!-- 링크 추가/수정 모달 -->
 <div class="overlay" id="link-overlay" onclick="if(event.target===this)closeLinkModal()">
     <div class="modal">
-        <h2>🔗 링크 추가</h2>
+        <h2 id="link-modal-title">🔗 링크 추가</h2>
+        <input type="hidden" id="l-edit-id">
         <div class="form-row">
             <label>분류</label>
             <select id="l-category">
@@ -797,7 +798,7 @@
         </div>
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closeLinkModal()">취소</button>
-            <button class="btn btn-primary" onclick="saveLink()">추가</button>
+            <button class="btn btn-primary" id="link-modal-btn" onclick="saveLink()">추가</button>
         </div>
     </div>
 </div>
@@ -1901,6 +1902,7 @@ function renderLinksSection() {
                     <button class="link-move" onclick="moveLinkOrder('${esc(l.id)}',1)" title="아래로" ${i===items.length-1?'disabled':''}>↓</button>
                     <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}')" title="${otherLabel}으로 이동">↔</button>
                     <button class="link-open" onclick="openLink('${esc(l.id)}')">열기</button>
+                    <button class="link-move" onclick="openEditLink('${esc(l.id)}')" title="수정" style="font-size:.82rem">✎</button>
                     <button class="link-del" onclick="removeLink('${esc(l.id)}')" title="삭제">✕</button>
                 </div>
             </div>`).join('');
@@ -1923,22 +1925,44 @@ function openLink(id) {
     if (l) window.open(l.url, '_blank', 'noopener');
 }
 function openAddLink() {
+    document.getElementById('l-edit-id').value = '';
     document.getElementById('l-category').value = '참고사이트';
     document.getElementById('l-title').value = '';
     document.getElementById('l-url').value = '';
+    document.getElementById('link-modal-title').textContent = '🔗 링크 추가';
+    document.getElementById('link-modal-btn').textContent = '추가';
+    document.getElementById('link-overlay').classList.add('show');
+    document.getElementById('l-title').focus();
+}
+function openEditLink(id) {
+    const l = links.find(x => x.id === id);
+    if (!l) return;
+    document.getElementById('l-edit-id').value = id;
+    document.getElementById('l-category').value = l.category || '참고사이트';
+    document.getElementById('l-title').value = l.title;
+    document.getElementById('l-url').value = l.url;
+    document.getElementById('link-modal-title').textContent = '🔗 링크 수정';
+    document.getElementById('link-modal-btn').textContent = '저장';
     document.getElementById('link-overlay').classList.add('show');
     document.getElementById('l-title').focus();
 }
 function closeLinkModal() { document.getElementById('link-overlay').classList.remove('show'); }
 function saveLink() {
+    const editId   = document.getElementById('l-edit-id').value;
     const title    = document.getElementById('l-title').value.trim();
     const category = document.getElementById('l-category').value;
     let url = document.getElementById('l-url').value.trim();
     if (!title) { showToast('링크 제목을 입력하세요.'); return; }
     if (!url)   { showToast('URL을 입력하세요.'); return; }
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-    links.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title, url, category });
-    saveLinks(); closeLinkModal(); showToast(`${title} 추가됨`);
+    if (editId) {
+        const l = links.find(x => x.id === editId);
+        if (l) { l.title = title; l.url = url; l.category = category; }
+        saveLinks(); closeLinkModal(); showToast(`${title} 수정됨`);
+    } else {
+        links.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title, url, category });
+        saveLinks(); closeLinkModal(); showToast(`${title} 추가됨`);
+    }
 }
 function removeLink(id) {
     if (!confirm('이 링크를 삭제할까요?')) return;
