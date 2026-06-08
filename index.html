@@ -271,6 +271,10 @@
         .link-open:hover { background: #EEF2FF; border-color: var(--primary); }
         .link-del { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .85rem; padding: 4px; border-radius: 4px; transition: color .15s; line-height: 1; }
         .link-del:hover { color: var(--red); }
+        .link-move { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .78rem; padding: 3px 5px; border-radius: 4px; transition: color .15s, background .15s; line-height: 1; }
+        .link-move:hover { color: var(--primary); background: #EEF2FF; }
+        .link-move:disabled { opacity: .25; cursor: default; }
+        .link-move:disabled:hover { color: #CBD5E1; background: none; }
 
         /* 설정 드롭다운 */
         .settings-menu { position: absolute; right: 24px; top: 56px; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12); overflow: hidden; z-index: 30; min-width: 150px; display: none; }
@@ -1884,15 +1888,18 @@ function renderLinksSection() {
     const refLinks = links.filter(l => !l.category || l.category === '참고사이트');
     const mgtLinks = links.filter(l => l.category === '관리시트');
 
-    function renderCol(items) {
+    function renderCol(items, otherLabel) {
         if (!items.length) return `<div style="color:var(--muted);font-size:.8rem;padding:4px 0">없음</div>`;
-        return items.map(l => `
+        return items.map((l, i) => `
             <div class="link-item">
                 <div class="link-info">
                     <div class="link-title">${esc(l.title)}</div>
                     <div class="link-url">${esc(l.url)}</div>
                 </div>
                 <div class="link-actions">
+                    <button class="link-move" onclick="moveLinkOrder('${esc(l.id)}',-1)" title="위로" ${i===0?'disabled':''}>↑</button>
+                    <button class="link-move" onclick="moveLinkOrder('${esc(l.id)}',1)" title="아래로" ${i===items.length-1?'disabled':''}>↓</button>
+                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}')" title="${otherLabel}으로 이동">↔</button>
                     <button class="link-open" onclick="openLink('${esc(l.id)}')">열기</button>
                     <button class="link-del" onclick="removeLink('${esc(l.id)}')" title="삭제">✕</button>
                 </div>
@@ -1902,11 +1909,11 @@ function renderLinksSection() {
     grid.innerHTML = `<div class="links-cols">
         <div>
             <div class="links-col-head">작업 참고 사이트</div>
-            <div class="links-col">${renderCol(refLinks)}</div>
+            <div class="links-col">${renderCol(refLinks, '관리용 시트')}</div>
         </div>
         <div>
             <div class="links-col-head">관리용 시트</div>
-            <div class="links-col">${renderCol(mgtLinks)}</div>
+            <div class="links-col">${renderCol(mgtLinks, '작업 참고 사이트')}</div>
         </div>
     </div>`;
 }
@@ -1937,6 +1944,25 @@ function removeLink(id) {
     if (!confirm('이 링크를 삭제할까요?')) return;
     links = links.filter(l => l.id !== id);
     saveLinks(); showToast('링크가 삭제되었습니다.');
+}
+function moveLinkCategory(id) {
+    const l = links.find(x => x.id === id);
+    if (!l) return;
+    l.category = (l.category === '관리시트') ? '참고사이트' : '관리시트';
+    saveLinks();
+}
+function moveLinkOrder(id, dir) {
+    const l = links.find(x => x.id === id);
+    if (!l) return;
+    const cat = l.category || '참고사이트';
+    const catItems = links.filter(x => (x.category || '참고사이트') === cat);
+    const idx = catItems.findIndex(x => x.id === id);
+    const targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= catItems.length) return;
+    const gi  = links.findIndex(x => x.id === id);
+    const gti = links.findIndex(x => x.id === catItems[targetIdx].id);
+    [links[gi], links[gti]] = [links[gti], links[gi]];
+    saveLinks();
 }
 
 // ── 설정 ──
