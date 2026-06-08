@@ -106,52 +106,37 @@
         .routine-rate-good { color: var(--green); font-weight: 700; }
         .routine-rate-warn { color: var(--amber); font-weight: 700; }
         .routine-rate-low  { color: var(--red);   font-weight: 700; }
-        .routine-body { padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; min-height: 46px; align-items: flex-start; }
-        .routine-item { display: inline-flex; align-items: center; gap: 6px; background: #F8FAFC; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; transition: all .15s; cursor: grab; }
-        .routine-item:hover { border-color: var(--primary); }
-        .routine-item.dragging { opacity: .35; border-style: dashed; cursor: grabbing; }
-        .routine-body.drag-over-routine { background: #EEF2FF; border-radius: 8px; }
-        .routine-item.done { background: #F0FDF4; border-color: #86EFAC; }
-        .routine-check { width: 15px; height: 15px; border-radius: 3px; border: 2px solid #CBD5E1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .65rem; transition: all .15s; color: transparent; cursor: pointer; }
-        .routine-item.done .routine-check { background: var(--green); border-color: var(--green); color: #fff; }
-        .routine-title { font-size: .82rem; font-weight: 500; cursor: pointer; }
-        .routine-title:hover { color: var(--primary); text-decoration: underline; }
-        .routine-assignee { font-size: .7rem; color: var(--muted); }
-        .routine-edit-btn { background: none; border: none; font-size: .72rem; color: #CBD5E1; cursor: pointer; padding: 2px 4px; border-radius: 4px; flex-shrink: 0; transition: color .15s; }
-        .routine-edit-btn:hover { color: var(--primary); }
-        .routine-empty { color: var(--muted); font-size: .82rem; padding: 4px 2px; }
-        /* 2-panel layout */
-        .routine-content { display: flex; align-items: stretch; }
-        .routine-list-panel { flex: 0 0 320px; border-right: 1px solid var(--border); overflow-y: auto; max-height: 220px; }
-        .routine-cal-panel { flex: 1; padding: 12px 16px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-        @media (max-width: 640px) {
-            .routine-content { flex-direction: column; }
-            .routine-list-panel { flex: none; max-height: 160px; border-right: none; border-bottom: 1px solid var(--border); }
-        }
-        /* Routine calendar */
-        .rc-legend { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
-        .rc-legend-item { display: inline-flex; align-items: center; gap: 4px; font-size: .7rem; color: var(--muted); }
-        .rc-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-        .rc-week { display: flex; gap: 5px; }
-        .rc-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .rc-day-name { font-size: .66rem; font-weight: 700; color: var(--muted); }
-        .rc-date-num { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: .74rem; font-weight: 700; color: var(--text); }
-        /* Today block (top) */
-        .rc-today-block { margin-bottom: 8px; }
-        .rc-today-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
-        .rc-today-tag { font-size: .68rem; font-weight: 800; color: var(--primary); letter-spacing: .04em; }
-        .rc-today-dn { font-size: .68rem; font-weight: 700; color: var(--muted); }
-        .rc-today-date { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--primary); color: #fff; font-size: .72rem; font-weight: 800; }
-        /* Bars */
-        .rc-bar-lg { width: 100%; height: 46px; border-radius: 8px; overflow: hidden; display: flex; gap: 1.5px; background: #E2E8F0; }
-        .rc-bar-sm { width: 100%; height: 28px; border-radius: 6px; overflow: hidden; display: flex; gap: 1px; background: #E2E8F0; }
-        /* Segments with label */
-        .rc-seg-lbl { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0 2px; transition: filter .12s; cursor: pointer; }
-        .rc-seg-lbl:hover { filter: brightness(1.12); }
-        .rc-seg-lbl.done { opacity: 1; }
-        .rc-seg-lbl.undone { opacity: .22; }
-        .rc-seg-lbl.future { opacity: .11; }
-        .rc-seg-lbl span { font-size: .59rem; font-weight: 700; color: rgba(255,255,255,.93); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; pointer-events: none; }
+        /* Grid layout */
+        .rg-wrap { overflow-x: auto; overflow-y: auto; max-height: 272px; }
+        .rg-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+        .rg-th-name { text-align: left; padding: 7px 14px; font-size: .7rem; font-weight: 700; color: var(--muted); background: #FAFAFA; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; }
+        .rg-th-day { text-align: center; padding: 6px 4px; font-size: .68rem; font-weight: 700; color: var(--muted); background: #FAFAFA; border-bottom: 1px solid var(--border); width: 54px; position: sticky; top: 0; z-index: 1; }
+        .rg-th-day.today-col { color: var(--primary); background: #EEF2FF; }
+        .rg-th-date { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; font-size: .72rem; font-weight: 800; border-radius: 50%; color: var(--text); }
+        .rg-th-date.today-badge { background: var(--primary); color: #fff; }
+        .rg-th-action { width: 30px; background: #FAFAFA; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; }
+        .rg-row { border-bottom: 1px solid var(--border); transition: background .12s; cursor: grab; }
+        .rg-row:hover { background: #F8FAFC; }
+        .rg-row:last-child { border-bottom: none; }
+        .rg-row.dragging { opacity: .35; cursor: grabbing; }
+        #routine-tbody.drag-over-routine { background: #EEF2FF; }
+        .rg-name-td { padding: 0; }
+        .rg-name-cell { display: flex; align-items: center; gap: 5px; padding: 8px 14px; }
+        .rg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .rg-abbr { font-size: .64rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; min-width: 22px; }
+        .rg-title-text { font-size: .8rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; max-width: 210px; }
+        .rg-title-text:hover { color: var(--primary); text-decoration: underline; }
+        .rg-cell { text-align: center; vertical-align: middle; padding: 5px 2px; }
+        .rg-cell.today-col { background: #F5F7FF; }
+        .rg-cell.clickable { cursor: pointer; }
+        .rg-cell.clickable:hover .rg-cell-inner { filter: brightness(.9); }
+        .rg-cell-inner { width: 32px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; color: #fff; }
+        .rg-cell-inner.undone { background: #E2E8F0; opacity: .55; }
+        .rg-cell-inner.future { background: #E2E8F0; opacity: .2; }
+        .rg-action-td { text-align: center; padding: 4px; }
+        .rg-edit-btn { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .82rem; padding: 3px 6px; border-radius: 4px; }
+        .rg-edit-btn:hover { color: var(--primary); background: #EEF2FF; }
+        .rg-empty { padding: 18px; color: var(--muted); font-size: .84rem; text-align: center; }
 
         /* ── 보드 탭 ── */
         .board-wrap { padding: 14px 24px 0; }
@@ -514,19 +499,7 @@
                 </div>
                 <button class="btn btn-secondary btn-sm" onclick="openAddTask(true)">+ 추가</button>
             </div>
-            <div class="routine-content">
-                <div class="routine-list-panel">
-                    <div class="routine-body" id="routine-body"
-                        ondragover="routineDragOver(event)"
-                        ondragleave="routineDragLeave(event)"
-                        ondrop="routineDrop(event)">
-                        <span class="routine-empty">상시 업무를 추가하면 여기에 표시됩니다.</span>
-                    </div>
-                </div>
-                <div class="routine-cal-panel">
-                    <div id="routine-calendar"></div>
-                </div>
-            </div>
+            <div id="routine-grid"></div>
         </div>
 
         <!-- 칸반 -->
@@ -1018,66 +991,27 @@ function renderStatsWidget() {
 // ── 상시 업무 섹션 ──
 function renderRoutineSection() {
     const routines = tasks.filter(t => t.isRoutine);
-    const cnt  = document.getElementById('routine-count');
-    const body = document.getElementById('routine-body');
+    const cnt    = document.getElementById('routine-count');
+    const grid   = document.getElementById('routine-grid');
     const rateEl = document.getElementById('routine-rate');
     if (cnt) cnt.textContent = routines.length;
-    if (!body) return;
+    if (!grid) return;
+
     if (!routines.length) {
-        body.innerHTML = `<span class="routine-empty">상시 업무를 추가하면 여기에 표시됩니다. "+ 추가" 버튼을 눌러보세요.</span>`;
+        grid.innerHTML = `<div class="rg-empty">상시 업무를 추가하면 여기에 표시됩니다. "+ 추가" 버튼을 눌러보세요.</div>`;
         if (rateEl) rateEl.style.display = 'none';
-        renderRoutineCalendar();
         return;
     }
 
-    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    const todayTs = todayStart.getTime();
-
-    const order = routineOrder.length ? routineOrder : [];
-    routines.sort((a, b) => {
-        const ai = order.indexOf(a.id), bi = order.indexOf(b.id);
-        if (ai !== -1 && bi !== -1) return ai - bi;
-        if (ai !== -1) return -1;
-        if (bi !== -1) return 1;
-        return (a.createdAt || 0) - (b.createdAt || 0);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayTs = today.getTime();
+    const dow = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+    const days = Array.from({length: 5}, (_, i) => {
+        const d = new Date(monday); d.setDate(monday.getDate() + i); return d;
     });
-
-    const doneToday = routines.filter(t => t.status === '완료' && t.doneAt >= todayTs).length;
-    const total = routines.length;
-    const rate = total > 0 ? Math.round(doneToday / total * 100) : 0;
-    if (rateEl) {
-        const cls = rate >= 80 ? 'routine-rate-good' : rate >= 50 ? 'routine-rate-warn' : 'routine-rate-low';
-        rateEl.style.display = '';
-        rateEl.innerHTML = `· <span class="${cls}">${doneToday}/${total} 처리 (${rate}%)</span>`;
-    }
-
-    body.innerHTML = routines.map(t => {
-        const done = t.status === '완료' && t.doneAt >= todayTs;
-        const accentColor = done ? '#22C55E' : (t.assignee ? getPersonColor(t.assignee) : '#CBD5E1');
-        return `<div class="routine-item${done ? ' done' : ''}" data-id="${t.id}" draggable="true"
-            style="border-left: 3px solid ${accentColor}"
-            ondragstart="routineDragStart(event,'${t.id}')"
-            ondragend="routineDragEnd(event)">
-            <div class="routine-check" onclick="event.stopPropagation();toggleRoutine('${t.id}')" title="완료 토글">${done ? '✓' : ''}</div>
-            <div onclick="openEdit('${t.id}')" style="cursor:pointer">
-                <div class="routine-title">${esc(t.title)}</div>
-                ${t.assignee ? `<div class="routine-assignee">👤 ${esc(t.assignee)}</div>` : ''}
-            </div>
-            <button class="routine-edit-btn" onclick="openEdit('${t.id}')" title="수정">✎</button>
-        </div>`;
-    }).join('');
-    renderRoutineCalendar();
-}
-
-function renderRoutineCalendar() {
-    const cal = document.getElementById('routine-calendar');
-    if (!cal) return;
-
-    const routines = tasks.filter(t => t.isRoutine);
-    if (!routines.length) {
-        cal.innerHTML = '<div style="padding:6px 0;color:var(--muted);font-size:.82rem">업무를 추가하면 캘린더에 표시됩니다.</div>';
-        return;
-    }
+    const dayNames = ['월','화','수','목','금'];
 
     const order = routineOrder.length ? routineOrder : [];
     const sorted = [...routines].sort((a, b) => {
@@ -1087,80 +1021,90 @@ function renderRoutineCalendar() {
         return (a.createdAt||0) - (b.createdAt||0);
     });
 
-    const shown = sorted.slice(0, 6);
-    const extra = sorted.length - shown.length;
+    const doneToday = sorted.filter(t => t.status === '완료' && t.doneAt >= todayTs).length;
+    const total = sorted.length;
+    const rate = total > 0 ? Math.round(doneToday / total * 100) : 0;
+    if (rateEl) {
+        const cls = rate >= 80 ? 'routine-rate-good' : rate >= 50 ? 'routine-rate-warn' : 'routine-rate-low';
+        rateEl.style.display = '';
+        rateEl.innerHTML = `· <span class="${cls}">${doneToday}/${total} 처리 (${rate}%)</span>`;
+    }
 
-    const today = new Date(); today.setHours(0,0,0,0);
-    const todayTs = today.getTime();
-    const dow = today.getDay();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+    // 헤더
+    const thDays = days.map((d, di) => {
+        const isToday = d.getTime() === todayTs;
+        return `<th class="rg-th-day${isToday ? ' today-col' : ''}">
+            ${dayNames[di]}<br>
+            <span class="rg-th-date${isToday ? ' today-badge' : ''}">${d.getDate()}</span>
+        </th>`;
+    }).join('');
 
-    const days = Array.from({length: 5}, (_, i) => {
-        const d = new Date(monday); d.setDate(monday.getDate() + i); return d;
-    });
-    const dayNames = ['월','화','수','목','금'];
-    const isWeekend = dow === 0 || dow === 6;
+    // 행
+    const rows = sorted.map(t => {
+        const color = getPersonColor(t.assignee || '');
+        const abbr  = t.assignee ? t.assignee.slice(0, 2) : '';
 
-    // Build bar segments for a given day
-    function makeBar(d, isLarge) {
-        const isFuture = d.getTime() > todayTs;
-        const dayStart = d.getTime();
-        const dayEnd   = dayStart + 86399999;
-        const segs = shown.map(t => {
-            const color = getPersonColor(t.assignee || '');
-            let cls;
-            if (isFuture) cls = 'future';
-            else cls = (t.doneAt && t.doneAt >= dayStart && t.doneAt <= dayEnd) ? 'done' : 'undone';
-            const short = t.title.length > 6 ? t.title.slice(0, 5) + '…' : t.title;
-            const lbl = (isLarge || shown.length <= 3) ? `<span>${esc(short)}</span>` : '';
-            return `<div class="rc-seg-lbl ${cls}" style="background:${color}" title="${esc(t.title)}${t.assignee ? ' · '+esc(t.assignee) : ''}" onclick="toggleRoutine('${t.id}')">${lbl}</div>`;
+        const cells = days.map(d => {
+            const isToday  = d.getTime() === todayTs;
+            const isFuture = d.getTime() > todayTs;
+            const dayStart = d.getTime();
+            const dayEnd   = dayStart + 86399999;
+            let cls, inner;
+            if (isToday) {
+                const done = t.status === '완료' && t.doneAt >= todayTs;
+                cls   = `today-col clickable${done ? ' done' : ''}`;
+                inner = done
+                    ? `<div class="rg-cell-inner" style="background:${color}">✓</div>`
+                    : `<div class="rg-cell-inner undone"></div>`;
+                return `<td class="rg-cell ${cls}" onclick="toggleRoutine('${t.id}')" title="클릭하여 완료 토글">${inner}</td>`;
+            } else if (isFuture) {
+                inner = `<div class="rg-cell-inner future"></div>`;
+                return `<td class="rg-cell future">${inner}</td>`;
+            } else {
+                const done = t.doneAt && t.doneAt >= dayStart && t.doneAt <= dayEnd;
+                cls   = done ? 'done' : 'undone';
+                inner = done
+                    ? `<div class="rg-cell-inner" style="background:${color};opacity:.5">✓</div>`
+                    : `<div class="rg-cell-inner undone"></div>`;
+                return `<td class="rg-cell ${cls}">${inner}</td>`;
+            }
         }).join('');
-        return `<div class="${isLarge ? 'rc-bar-lg' : 'rc-bar-sm'}">${segs}</div>`;
-    }
 
-    // Legend
-    const assignees = [...new Set(shown.map(t => t.assignee).filter(Boolean))];
-    const legendHtml = `<div class="rc-legend">${
-        assignees.map(a => `<span class="rc-legend-item"><span class="rc-legend-dot" style="background:${getPersonColor(a)}"></span>${esc(a)}</span>`).join('')
-    }${extra > 0 ? `<span class="rc-legend-item" style="margin-left:4px">+${extra}건 더</span>` : ''}</div>`;
+        return `<tr class="rg-row" data-id="${t.id}" draggable="true"
+            ondragstart="routineDragStart(event,'${t.id}')"
+            ondragend="routineDragEnd(event)">
+            <td class="rg-name-td">
+                <div class="rg-name-cell">
+                    <span class="rg-dot" style="background:${color}"></span>
+                    <span class="rg-abbr">${esc(abbr)}</span>
+                    <span class="rg-title-text" onclick="openEdit('${t.id}')">${esc(t.title)}</span>
+                </div>
+            </td>
+            ${cells}
+            <td class="rg-action-td">
+                <button class="rg-edit-btn" onclick="openEdit('${t.id}')" title="수정">✎</button>
+            </td>
+        </tr>`;
+    }).join('');
 
-    let html = '';
-
-    if (!isWeekend) {
-        // Today block at top (large)
-        const todayIdx = days.findIndex(d => d.getTime() === todayTs);
-        const todayDayName = todayIdx >= 0 ? dayNames[todayIdx] : '';
-        html += `<div class="rc-today-block">
-            <div class="rc-today-hdr">
-                <span class="rc-today-tag">오늘</span>
-                <span class="rc-today-dn">${todayDayName}</span>
-                <div class="rc-today-date">${today.getDate()}</div>
-            </div>
-            ${makeBar(today, true)}
-        </div>`;
-
-        // Other 4 weekdays below (small)
-        const others = days.filter(d => d.getTime() !== todayTs);
-        html += `<div class="rc-week">${others.map(d => {
-            const di = days.indexOf(d);
-            return `<div class="rc-day">
-                <div class="rc-day-name">${dayNames[di]}</div>
-                <div class="rc-date-num">${d.getDate()}</div>
-                ${makeBar(d, false)}
-            </div>`;
-        }).join('')}</div>`;
-    } else {
-        // Weekend: show all 5 weekdays in a row (no today block)
-        html += `<div class="rc-week">${days.map((d, di) => `<div class="rc-day">
-            <div class="rc-day-name">${dayNames[di]}</div>
-            <div class="rc-date-num">${d.getDate()}</div>
-            ${makeBar(d, false)}
-        </div>`).join('')}</div>`;
-    }
-
-    cal.innerHTML = html + legendHtml;
+    grid.innerHTML = `<div class="rg-wrap">
+        <table class="rg-table">
+            <thead><tr>
+                <th class="rg-th-name">업무</th>
+                ${thDays}
+                <th class="rg-th-action"></th>
+            </tr></thead>
+            <tbody id="routine-tbody"
+                ondragover="routineDragOver(event)"
+                ondragleave="routineDragLeave(event)"
+                ondrop="routineDrop(event)">
+                ${rows}
+            </tbody>
+        </table>
+    </div>`;
 }
+
+// renderRoutineCalendar 제거 — renderRoutineSection()의 그리드로 통합됨
 
 function toggleRoutine(id) {
     const t = tasks.find(x => x.id === id);
@@ -1439,9 +1383,9 @@ function routineDragStart(e, id) {
     setTimeout(() => e.target.classList.add('dragging'), 0);
 }
 function routineDragEnd(e) {
-    e.target.classList.remove('dragging');
-    const body = document.getElementById('routine-body');
-    if (body) body.classList.remove('drag-over-routine');
+    e.target.closest('tr')?.classList.remove('dragging');
+    const tbody = document.getElementById('routine-tbody');
+    if (tbody) tbody.classList.remove('drag-over-routine');
 }
 function routineDragOver(e) {
     e.preventDefault();
@@ -1457,11 +1401,11 @@ function routineDrop(e) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over-routine');
     if (!routineDragId) return;
-    const items = [...e.currentTarget.querySelectorAll('.routine-item[data-id]')].filter(el => el.dataset.id !== routineDragId);
+    const items = [...e.currentTarget.querySelectorAll('tr[data-id]')].filter(el => el.dataset.id !== routineDragId);
     let insertBeforeId = null;
     for (const item of items) {
         const rect = item.getBoundingClientRect();
-        if (e.clientY < rect.bottom && e.clientX < rect.left + rect.width / 2) {
+        if (e.clientY < rect.top + rect.height / 2) {
             insertBeforeId = item.dataset.id;
             break;
         }
