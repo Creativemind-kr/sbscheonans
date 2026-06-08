@@ -122,7 +122,7 @@
         .routine-empty { color: var(--muted); font-size: .82rem; padding: 4px 2px; }
         /* 2-panel layout */
         .routine-content { display: flex; align-items: stretch; }
-        .routine-list-panel { flex: 0 0 260px; border-right: 1px solid var(--border); overflow-y: auto; max-height: 220px; }
+        .routine-list-panel { flex: 0 0 320px; border-right: 1px solid var(--border); overflow-y: auto; max-height: 220px; }
         .routine-cal-panel { flex: 1; padding: 12px 16px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
         @media (max-width: 640px) {
             .routine-content { flex-direction: column; }
@@ -1047,7 +1047,9 @@ function renderRoutineSection() {
 
     body.innerHTML = routines.map(t => {
         const done = t.status === '완료' && t.doneAt >= todayTs;
+        const accentColor = done ? '#22C55E' : (t.assignee ? getPersonColor(t.assignee) : '#CBD5E1');
         return `<div class="routine-item${done ? ' done' : ''}" data-id="${t.id}" draggable="true"
+            style="border-left: 3px solid ${accentColor}"
             ondragstart="routineDragStart(event,'${t.id}')"
             ondragend="routineDragEnd(event)">
             <div class="routine-check" onclick="event.stopPropagation();toggleRoutine('${t.id}')" title="완료 토글">${done ? '✓' : ''}</div>
@@ -1088,10 +1090,10 @@ function renderRoutineCalendar() {
     const monday = new Date(today);
     monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
 
-    const days = Array.from({length: 7}, (_, i) => {
+    const days = Array.from({length: 5}, (_, i) => {
         const d = new Date(monday); d.setDate(monday.getDate() + i); return d;
     });
-    const dayNames = ['월','화','수','목','금','토','일'];
+    const dayNames = ['월','화','수','목','금'];
 
     const assignees = [...new Set(shown.map(t => t.assignee).filter(Boolean))];
     const legendHtml = `<div class="rc-legend">${
@@ -1101,7 +1103,6 @@ function renderRoutineCalendar() {
     const weekHtml = `<div class="rc-week">${days.map((d, di) => {
         const isToday  = d.getTime() === todayTs;
         const isFuture = d.getTime() > todayTs;
-        const isWeekend = di >= 5;
         const dayStart = d.getTime();
         const dayEnd   = dayStart + 86399999;
 
@@ -1116,7 +1117,7 @@ function renderRoutineCalendar() {
             return `<div class="rc-seg ${cls}" style="background:${color}" title="${esc(t.title)}${t.assignee ? ' · '+esc(t.assignee) : ''}" onclick="toggleRoutine('${t.id}')"></div>`;
         }).join('');
 
-        return `<div class="rc-day${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}">
+        return `<div class="rc-day${isToday ? ' today' : ''}">
             <div class="rc-day-name">${dayNames[di]}</div>
             <div class="rc-date-num">${d.getDate()}</div>
             <div class="rc-bar">${segs}</div>
@@ -2186,7 +2187,7 @@ function addComment() {
 
 // ── 담당자 컬러 시스템 ──
 const PERSON_COLORS = {};
-const COLOR_PALETTE_P = ['#4F46E5','#0EA5E9','#10B981','#F59E0B','#EF4444','#EC4899','#F97316','#06B6D4'];
+const COLOR_PALETTE_P = ['#EF4444','#F97316','#EAB308','#22C55E','#14B8A6','#3B82F6','#8B5CF6','#EC4899'];
 
 function initPersonColors() {
     const ordered = memberOrder.length ? [...memberOrder] : [];
