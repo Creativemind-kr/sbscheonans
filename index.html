@@ -2149,11 +2149,20 @@ function renderComments(comments) {
         <div class="comment-item">
             <div class="comment-item-top">
                 <span class="comment-author">${esc(c.author || '익명')}</span>
-                <span class="comment-time">${timeAgo(c.createdAt)}</span>
+                <span style="display:flex;align-items:center;gap:8px">
+                    <span class="comment-time">${timeAgo(c.createdAt)}</span>
+                    <button onclick="deleteComment('${c.id}')" style="background:none;border:none;cursor:pointer;color:#CBD5E1;font-size:.72rem;padding:2px 4px;border-radius:4px;transition:color .15s" onmouseover="this.style.color='#EF4444'" onmouseout="this.style.color='#CBD5E1'" title="삭제">✕</button>
+                </span>
             </div>
             <div class="comment-text">${mentionify(c.text)}</div>
         </div>`).join('');
     el.scrollTop = el.scrollHeight;
+}
+
+function deleteComment(id) {
+    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+    db.collection('comments').doc(id).delete();
+    showToast('댓글 삭제됨');
 }
 
 function addComment() {
