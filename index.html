@@ -1214,7 +1214,8 @@ function checkMentionBanner() {
     const mentions = activity.filter(a => {
         if (a.type !== 'mention' || a.createdAt <= cutoff) return false;
         const task = tasks.find(t => t.id === a.taskId);
-        if (task && task.status === '완료') {
+        if (!task) return false; // 삭제된 업무 멘션 제외
+        if (task.status === '완료') {
             const due = task.dueDate ? new Date(task.dueDate) : null;
             if (!due || due < today) return false;
         }
