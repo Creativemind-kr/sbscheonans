@@ -401,6 +401,7 @@
         .an-warn { background: #FEF3C7; color: #D97706; }
         .an-alert { background: #FEE2E2; color: #DC2626; }
         .an-good { background: #D1FAE5; color: #065F46; }
+        .an-info { background: #EEF2FF; color: #4338CA; }
         .analysis-chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; }
         .analysis-chart-title { font-size: .9rem; font-weight: 700; margin-bottom: 12px; }
         .analysis-chart-wrap { position: relative; height: 220px; }
@@ -1038,7 +1039,11 @@ function renderRoutineSection() {
         return (a.createdAt||0) - (b.createdAt||0);
     });
 
-    const doneToday = sorted.filter(t => t.status === '완료' && t.doneAt >= todayTs).length;
+    const todayKey = today.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const doneToday = sorted.filter(t => {
+        if (t.doneHistory) return t.doneHistory[todayKey] === true;
+        return t.status === '완료' && t.doneAt >= todayTs;
+    }).length;
     const total = sorted.length;
     const rate = total > 0 ? Math.round(doneToday / total * 100) : 0;
     if (rateEl) {
@@ -1064,26 +1069,26 @@ function renderRoutineSection() {
         const cells = days.map(d => {
             const isToday  = d.getTime() === todayTs;
             const isFuture = d.getTime() > todayTs;
-            const dayStart = d.getTime();
-            const dayEnd   = dayStart + 86399999;
-            let cls, inner;
+            const dateKey  = d.toISOString().slice(0, 10);
+            let inner;
             if (isToday) {
-                const done = t.status === '완료' && t.doneAt >= todayTs;
-                cls   = `today-col clickable${done ? ' done' : ''}`;
+                const done = t.doneHistory ? (t.doneHistory[dateKey] === true)
+                                           : (t.status === '완료' && t.doneAt >= todayTs);
+                const cls = `today-col clickable${done ? ' done' : ''}`;
                 inner = done
                     ? `<div class="rg-cell-inner" style="background:${color}">✓</div>`
                     : `<div class="rg-cell-inner undone"></div>`;
                 return `<td class="rg-cell ${cls}" onclick="toggleRoutine('${t.id}')" title="클릭하여 완료 토글">${inner}</td>`;
             } else if (isFuture) {
-                inner = `<div class="rg-cell-inner future"></div>`;
-                return `<td class="rg-cell future">${inner}</td>`;
+                return `<td class="rg-cell future"><div class="rg-cell-inner future"></div></td>`;
             } else {
-                const done = t.doneAt && t.doneAt >= dayStart && t.doneAt <= dayEnd;
-                cls   = done ? 'done' : 'undone';
+                // 과거 날짜 — 읽기 전용, 클릭 불가
+                const done = t.doneHistory ? (t.doneHistory[dateKey] === true)
+                                           : (t.doneAt && t.doneAt >= d.getTime() && t.doneAt <= d.getTime() + 86399999);
                 inner = done
                     ? `<div class="rg-cell-inner" style="background:${color};opacity:.5">✓</div>`
                     : `<div class="rg-cell-inner undone"></div>`;
-                return `<td class="rg-cell ${cls}">${inner}</td>`;
+                return `<td class="rg-cell">${inner}</td>`;
             }
         }).join('');
 
@@ -1128,13 +1133,21 @@ function renderRoutineSection() {
 function toggleRoutine(id) {
     const t = tasks.find(x => x.id === id);
     if (!t) return;
-    const newStatus = t.status === '완료' ? '작업 시작 안함' : '완료';
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const history  = Object.assign({}, t.doneHistory || {});
+    const wasDone  = history[todayKey] === true;
+    if (wasDone) {
+        delete history[todayKey];
+    } else {
+        history[todayKey] = true;
+    }
     db.collection('tasks').doc(id).update({
-        status: newStatus,
-        doneAt: newStatus === '완료' ? Date.now() : null
+        doneHistory: history,
+        status: wasDone ? '작업 시작 안함' : '완료',
+        doneAt: wasDone ? null : Date.now()
     });
-    logActivity('routine_toggle', id, t.title, newStatus === '완료' ? '완료' : '재시작');
-    showToast(newStatus === '완료' ? '완료 처리됨' : '다시 시작');
+    logActivity('routine_toggle', id, t.title, wasDone ? '재시작' : '완료');
+    showToast(wasDone ? '다시 시작' : '완료 처리됨');
 }
 
 // ── 마감 임박 배너 ──
@@ -2338,31 +2351,71 @@ function buildAnalysisTextSection() {
     // 담당자별 행
     persons.forEach(person => {
         const pt = allNonRoutine.filter(t => t.assignee === person);
+        const pRoutine = periodTasks.filter(t => t.isRoutine && t.assignee === person);
         const tags = [];
 
-        if (analysisPeriod === 'month' && pt.length > 0) {
-            const weeks = [0,0,0,0,0];
-            pt.forEach(t => { const w = Math.min(Math.floor((new Date(t.doneAt).getDate()-1)/7),4); weeks[w]++; });
-            const peak = weeks.indexOf(Math.max(...weeks));
-            if (Math.max(...weeks) > 1) tags.push(`<span class="an-tag an-warn">${peak+1}주차 집중</span>`);
-        }
-        if (analysisPeriod === 'year' && pt.length > 0) {
-            const months = new Array(12).fill(0);
-            pt.forEach(t => { months[new Date(t.doneAt).getMonth()]++; });
-            const peakM = months.indexOf(Math.max(...months));
-            if (Math.max(...months) > 0) tags.push(`<span class="an-tag an-warn">${peakM+1}월 최다</span>`);
-        }
-        const pRoutine = periodTasks.filter(t => t.isRoutine && t.assignee === person);
-        if (pRoutine.length > 0 && pt.length > 0 && pRoutine.length/(pRoutine.length+pt.length) > 0.5)
-            tags.push(`<span class="an-tag an-alert">상시업무 과중</span>`);
-        if (totalNonRoutine > 0 && persons.length > 1 && pt.length/totalNonRoutine > 0.45)
+        // ─ 경고 태그 (최우선) ─
+        if (totalNonRoutine > 0 && persons.length > 1 && pt.length / totalNonRoutine > 0.45)
             tags.push(`<span class="an-tag an-alert">업무 분배 필요</span>`);
+        if (pRoutine.length > 0 && pt.length > 0 && pRoutine.length / (pRoutine.length + pt.length) > 0.5)
+            tags.push(`<span class="an-tag an-alert">상시업무 과중</span>`);
+
+        // ─ 기간별 업무 집중 패턴 ─
+        if (pt.length > 0) {
+            if (analysisPeriod === 'day') {
+                const byDow = [0,0,0,0,0];
+                pt.forEach(t => { const d = new Date(t.doneAt).getDay(); if (d>=1&&d<=5) byDow[d-1]++; });
+                const maxDow = Math.max(...byDow);
+                const peakDow = byDow.indexOf(maxDow);
+                if (maxDow >= 2) tags.push(`<span class="an-tag an-warn">${['월','화','수','목','금'][peakDow]}요일 집중</span>`);
+                else if (byDow.filter(v=>v>0).length >= 3) tags.push(`<span class="an-tag an-good">균등 처리</span>`);
+            }
+            if (analysisPeriod === 'week') {
+                const thisWs = getMondayOfWeek(now);
+                const prev2Ws = new Date(thisWs.getTime() - 7*86400000);
+                const recent = pt.filter(t => t.doneAt >= prev2Ws.getTime());
+                if (recent.length >= pt.length * 0.6) tags.push(`<span class="an-tag an-good">최근 활성</span>`);
+                else tags.push(`<span class="an-tag an-warn">최근 감소세</span>`);
+            }
+            if (analysisPeriod === 'month') {
+                const weeks = [0,0,0,0,0];
+                pt.forEach(t => { const w = Math.min(Math.floor((new Date(t.doneAt).getDate()-1)/7),4); weeks[w]++; });
+                const peak = weeks.indexOf(Math.max(...weeks));
+                if (Math.max(...weeks) > 1) tags.push(`<span class="an-tag an-warn">${peak+1}주차 집중</span>`);
+                const prevMs = new Date(now.getFullYear(), now.getMonth()-1, 1).getTime();
+                const prevMe = new Date(now.getFullYear(), now.getMonth(), 0, 23,59,59,999).getTime();
+                const prevPt = completed.filter(t => !t.isRoutine && t.assignee === person && t.doneAt >= prevMs && t.doneAt <= prevMe);
+                if (prevPt.length > 0 && pt.length > prevPt.length * 1.3)
+                    tags.push(`<span class="an-tag an-good">전월 대비 ↑</span>`);
+                else if (prevPt.length > 0 && pt.length < prevPt.length * 0.7)
+                    tags.push(`<span class="an-tag an-warn">전월 대비 ↓</span>`);
+            }
+            if (analysisPeriod === 'year') {
+                const months = new Array(12).fill(0);
+                pt.forEach(t => { months[new Date(t.doneAt).getMonth()]++; });
+                const peakM = months.indexOf(Math.max(...months));
+                if (Math.max(...months) > 0) tags.push(`<span class="an-tag an-warn">${peakM+1}월 최다</span>`);
+                if (now.getMonth() >= 6) {
+                    const h1 = months.slice(0,6).reduce((a,b)=>a+b,0);
+                    const h2m = now.getMonth() - 5;
+                    const h2 = months.slice(6, now.getMonth()+1).reduce((a,b)=>a+b,0);
+                    if (h1 > 0 && h2/h2m > h1/6 * 1.2) tags.push(`<span class="an-tag an-good">하반기 증가</span>`);
+                }
+            }
+            // 이 기간 최다 처리자
+            const maxPt = Math.max(...persons.map(p => allNonRoutine.filter(t => t.assignee === p).length));
+            const hasDist = tags.some(t => t.includes('업무 분배'));
+            if (persons.length > 1 && pt.length === maxPt && maxPt > 0 && !hasDist)
+                tags.push(`<span class="an-tag an-info">최다 처리</span>`);
+        }
+
+        // ─ 없음 / 정상 ─
         if (pt.length === 0 && analysisPeriod !== 'week' && analysisPeriod !== 'day')
             tags.push(`<span class="an-tag an-warn">완료 없음</span>`);
         if (pt.length > 0 && tags.length === 0)
             tags.push(`<span class="an-tag an-good">정상</span>`);
 
-        rows += buildAnalysisRow(`👤 ${esc(person)}`, `${pt.length}건 처리`, tags.join('') || '—', person);
+        rows += buildAnalysisRow(`👤 ${esc(person)}`, `${pt.length}건 처리`, tags.slice(0,5).join('') || '—', person);
     });
 
     // 상시업무 행 (최하단)
