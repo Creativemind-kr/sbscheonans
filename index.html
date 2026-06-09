@@ -1039,7 +1039,7 @@ function renderRoutineSection() {
         return (a.createdAt||0) - (b.createdAt||0);
     });
 
-    const todayKey = today.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const todayKey = fmtDateKey(today); // 로컬 날짜 기준 "YYYY-MM-DD"
     const doneToday = sorted.filter(t => {
         if (t.doneHistory) return t.doneHistory[todayKey] === true;
         return t.status === '완료' && t.doneAt >= todayTs;
@@ -1069,10 +1069,11 @@ function renderRoutineSection() {
         const cells = days.map(d => {
             const isToday  = d.getTime() === todayTs;
             const isFuture = d.getTime() > todayTs;
-            const dateKey  = d.toISOString().slice(0, 10);
+            const dk       = fmtDateKey(d); // 로컬 날짜 기준 키
             let inner;
             if (isToday) {
-                const done = t.doneHistory ? (t.doneHistory[dateKey] === true)
+                // 오늘: doneHistory 우선, 없으면 legacy status 확인
+                const done = t.doneHistory ? (t.doneHistory[dk] === true)
                                            : (t.status === '완료' && t.doneAt >= todayTs);
                 const cls = `today-col clickable${done ? ' done' : ''}`;
                 inner = done
@@ -1083,8 +1084,10 @@ function renderRoutineSection() {
                 return `<td class="rg-cell future"><div class="rg-cell-inner future"></div></td>`;
             } else {
                 // 과거 날짜 — 읽기 전용, 클릭 불가
-                const done = t.doneHistory ? (t.doneHistory[dateKey] === true)
-                                           : (t.doneAt && t.doneAt >= d.getTime() && t.doneAt <= d.getTime() + 86399999);
+                // history와 legacy doneAt 둘 다 확인 (migration 기간 호환)
+                const doneByHistory = t.doneHistory && t.doneHistory[dk] === true;
+                const doneByLegacy  = t.doneAt && t.doneAt >= d.getTime() && t.doneAt <= d.getTime() + 86399999;
+                const done = doneByHistory || doneByLegacy;
                 inner = done
                     ? `<div class="rg-cell-inner" style="background:${color};opacity:.5">✓</div>`
                     : `<div class="rg-cell-inner undone"></div>`;
@@ -1133,7 +1136,7 @@ function renderRoutineSection() {
 function toggleRoutine(id) {
     const t = tasks.find(x => x.id === id);
     if (!t) return;
-    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayKey = fmtDateKey(); // 로컬 날짜 기준
     const history  = Object.assign({}, t.doneHistory || {});
     const wasDone  = history[todayKey] === true;
     if (wasDone) {
@@ -2607,6 +2610,8 @@ function exportAnalysis() {
 
 // ── 유틸 ──
 function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+// 로컬 날짜 키 (UTC가 아닌 브라우저 로컬 기준) — "YYYY-MM-DD"
+function fmtDateKey(d) { const dt = d||new Date(); return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
 let _tt;
 function showToast(msg, ms=2500) {
     const el = document.getElementById('toast');
