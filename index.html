@@ -129,6 +129,8 @@
         .rg-name-sub { font-size: .68rem; color: var(--muted); padding-left: 13px; white-space: nowrap; }
         .rg-cell { text-align: center; vertical-align: middle; padding: 5px 2px; }
         .rg-cell.today-col { background: #F5F7FF; }
+        .rg-cell.rg-cell-past { cursor: pointer; }
+        .rg-cell.rg-cell-past:hover .rg-cell-inner { outline: 1px dashed #CBD5E1; border-radius: 6px; }
         .rg-cell.clickable { cursor: pointer; }
         .rg-cell.clickable:hover .rg-cell-inner { filter: brightness(.9); }
         .rg-cell-inner { width: 32px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; color: #fff; }
@@ -1083,15 +1085,14 @@ function renderRoutineSection() {
             } else if (isFuture) {
                 return `<td class="rg-cell future"><div class="rg-cell-inner future"></div></td>`;
             } else {
-                // 과거 날짜 — 읽기 전용, 클릭 불가
-                // history와 legacy doneAt 둘 다 확인 (migration 기간 호환)
+                // 과거 날짜 — 비밀번호로 수정 가능
                 const doneByHistory = t.doneHistory && t.doneHistory[dk] === true;
                 const doneByLegacy  = t.doneAt && t.doneAt >= d.getTime() && t.doneAt <= d.getTime() + 86399999;
                 const done = doneByHistory || doneByLegacy;
                 inner = done
                     ? `<div class="rg-cell-inner" style="background:${color};opacity:.5">✓</div>`
                     : `<div class="rg-cell-inner undone"></div>`;
-                return `<td class="rg-cell">${inner}</td>`;
+                return `<td class="rg-cell rg-cell-past" onclick="editPastRoutine('${t.id}','${dk}')" title="수정하려면 클릭">${inner}</td>`;
             }
         }).join('');
 
@@ -1133,17 +1134,22 @@ function renderRoutineSection() {
 
 // renderRoutineCalendar 제거 — renderRoutineSection()의 그리드로 통합됨
 
+function buildRoutineHistory(t) {
+    const history = Object.assign({}, t.doneHistory || {});
+    // 레거시 doneAt → doneHistory 1회 마이그레이션
+    if (!t.doneHistory && t.doneAt) {
+        history[fmtDateKey(new Date(t.doneAt))] = true;
+    }
+    return history;
+}
+
 function toggleRoutine(id) {
     const t = tasks.find(x => x.id === id);
     if (!t) return;
-    const todayKey = fmtDateKey(); // 로컬 날짜 기준
-    const history  = Object.assign({}, t.doneHistory || {});
+    const todayKey = fmtDateKey();
+    const history  = buildRoutineHistory(t);
     const wasDone  = history[todayKey] === true;
-    if (wasDone) {
-        delete history[todayKey];
-    } else {
-        history[todayKey] = true;
-    }
+    if (wasDone) { delete history[todayKey]; } else { history[todayKey] = true; }
     db.collection('tasks').doc(id).update({
         doneHistory: history,
         status: wasDone ? '작업 시작 안함' : '완료',
@@ -1151,6 +1157,18 @@ function toggleRoutine(id) {
     });
     logActivity('routine_toggle', id, t.title, wasDone ? '재시작' : '완료');
     showToast(wasDone ? '다시 시작' : '완료 처리됨');
+}
+
+function editPastRoutine(taskId, dk) {
+    const pw = prompt('🔒 관리자 비밀번호를 입력하세요');
+    if (pw === null) return;
+    if (pw !== 'cjsdks11!!') { showToast('비밀번호가 틀렸습니다'); return; }
+    const t = tasks.find(x => x.id === taskId);
+    if (!t) return;
+    const history = buildRoutineHistory(t);
+    if (history[dk]) { delete history[dk]; } else { history[dk] = true; }
+    db.collection('tasks').doc(taskId).update({ doneHistory: history });
+    showToast('수정됐습니다');
 }
 
 // ── 마감 임박 배너 ──
