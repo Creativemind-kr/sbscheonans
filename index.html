@@ -315,7 +315,7 @@
         .mention-banner-top { display: flex; align-items: center; gap: 12px; }
         .mention-banner .banner-text { color: #5B21B6; flex: 1; font-size: .875rem; }
         .mention-items { display: flex; flex-wrap: wrap; gap: 8px; padding-left: 24px; }
-        .mention-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: .78rem; font-weight: 500; background: #EDE9FE; color: #6D28D9; cursor: pointer; transition: background .12s; }
+        .mention-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px 4px 10px; border-radius: 6px; font-size: .78rem; font-weight: 500; background: #EDE9FE; color: #6D28D9; transition: background .12s; }
         .mention-chip:hover { background: #DDD6FE; }
 
         /* Toast */
@@ -852,6 +852,7 @@ function loadData() {
         }
         updateAssigneeList();
         renderAll();
+        checkMentionBanner();
     });
     db.doc('config/app').onSnapshot(doc => {
         const data = doc.data() || {};
@@ -871,10 +872,9 @@ function loadData() {
         updateAssigneeList();
         renderAll();
     });
-    let mentionBannerChecked = false;
     db.collection('activity').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
-        activity = snapshot.docs.map(d => d.data());
-        if (!mentionBannerChecked) { mentionBannerChecked = true; checkMentionBanner(); }
+        activity = snapshot.docs.map(d => ({ ...d.data(), _id: d.id }));
+        checkMentionBanner();
         if (activeTab === 'feed') renderFeedTab();
     });
 }
@@ -1208,33 +1208,49 @@ function dismissDeadlineBanner() {
 }
 
 // ── 멘션 알림 배너 ──
+function getMentionDismissed() {
+    try { return JSON.parse(localStorage.getItem('dismissedMentions') || '[]'); } catch { return []; }
+}
+function dismissMentionItem(key) {
+    const list = getMentionDismissed();
+    if (!list.includes(key)) { list.push(key); localStorage.setItem('dismissedMentions', JSON.stringify(list)); }
+    checkMentionBanner();
+}
 function checkMentionBanner() {
-    const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const mentions = activity.filter(a => {
+    const cutoff    = Date.now() - 7 * 24 * 3600 * 1000;
+    const today     = new Date(); today.setHours(0, 0, 0, 0);
+    const dismissed = getMentionDismissed();
+    const mentions  = activity.filter(a => {
         if (a.type !== 'mention' || a.createdAt <= cutoff) return false;
+        const key = a._id || String(a.createdAt);
+        if (dismissed.includes(key)) return false;
         const task = tasks.find(t => t.id === a.taskId);
-        if (!task) return false; // 삭제된 업무 멘션 제외
+        if (!task) return false;
         if (task.status === '완료') {
             const due = task.dueDate ? new Date(task.dueDate) : null;
             if (!due || due < today) return false;
         }
         return true;
     });
-    if (!mentions.length) return;
+    const banner = document.getElementById('mention-banner');
+    if (!mentions.length) { banner.classList.remove('show'); return; }
     const plural = mentions.length > 1 ? `${mentions.length}건` : '';
     document.getElementById('mention-banner-text').innerHTML =
         `<strong>멘션 알림 ${plural}</strong> — 항목을 클릭하면 해당 업무로 이동합니다`;
     document.getElementById('mention-items').innerHTML = mentions.map(a => {
         try {
+            const key = a._id || String(a.createdAt);
             const d = JSON.parse(a.detail);
             const tags = d.mentions.map(m => `<span class="mention-tag">@${esc(m)}</span>`).join(' ');
-            return `<span class="mention-chip" onclick="openEdit('${a.taskId}')">
-                ${esc(d.author)} → ${tags} · <em style="font-style:normal;opacity:.75">${esc(a.taskTitle)}</em>
+            return `<span class="mention-chip">
+                <span onclick="openEdit('${a.taskId}')" style="flex:1;display:inline-flex;align-items:center;gap:4px">
+                    ${esc(d.author)} → ${tags} · <em style="font-style:normal;opacity:.75">${esc(a.taskTitle)}</em>
+                </span>
+                <button onclick="dismissMentionItem('${key}')" style="background:none;border:none;cursor:pointer;color:#7C3AED;font-size:.82rem;padding:0 2px;line-height:1;opacity:.6" title="이 알림 닫기">×</button>
             </span>`;
         } catch(e) { return ''; }
     }).filter(Boolean).join('');
-    document.getElementById('mention-banner').classList.add('show');
+    banner.classList.add('show');
 }
 
 function dismissMentionBanner() {
