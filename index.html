@@ -667,7 +667,7 @@
         </div>
         <div class="form-row">
             <label>설명 (선택)</label>
-            <textarea id="f-desc" placeholder="상세 내용"></textarea>
+            <textarea id="f-desc" placeholder="상세 내용 (이미지는 Ctrl+V로 첨부)"></textarea>
         </div>
         <div class="attach-section">
             <div class="attach-section-title">📎 첨부 파일</div>
@@ -2665,6 +2665,18 @@ function showToast(msg, ms=2500) {
 }
 
 // ── 진입 ──
+document.getElementById('f-desc').addEventListener('paste', async function(e) {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItem = items.find(item => item.type.startsWith('image/'));
+    if (!imgItem) return;
+    e.preventDefault();
+    const file = imgItem.getAsFile();
+    if (!file) return;
+    const named = new File([file], `screenshot_${Date.now()}.png`, { type: file.type });
+    showToast('이미지 업로드 중...');
+    await uploadFile(named);
+});
+
 window.addEventListener('load', () => {
     if (sessionStorage.getItem('auth') === '1') {
         document.getElementById('pw-screen').style.display = 'none';
