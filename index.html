@@ -261,8 +261,9 @@
         .links-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
         .links-section-title { font-size: .95rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
         .links-grid { }
-        .links-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 700px) { .links-cols { grid-template-columns: 1fr; } }
+        .links-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .links-cols { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 600px) { .links-cols { grid-template-columns: 1fr; } }
         .links-col-head { font-size: .76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
         .links-col { display: flex; flex-direction: column; gap: 7px; }
         .link-item { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 10px 14px; transition: border-color .2s, box-shadow .2s; }
@@ -789,7 +790,8 @@
         <div class="form-row">
             <label>분류</label>
             <select id="l-category">
-                <option value="참고사이트">작업 참고 사이트</option>
+                <option value="참고사이트">작업참고</option>
+                <option value="배포링크">배포용 링크</option>
                 <option value="관리시트">관리용 시트</option>
             </select>
         </div>
@@ -1949,9 +1951,10 @@ function renderLinksSection() {
     }
 
     const refLinks = links.filter(l => !l.category || l.category === '참고사이트');
+    const depLinks = links.filter(l => l.category === '배포링크');
     const mgtLinks = links.filter(l => l.category === '관리시트');
 
-    function renderCol(items, otherLabel) {
+    function renderCol(items) {
         if (!items.length) return `<div style="color:var(--muted);font-size:.8rem;padding:4px 0">없음</div>`;
         return items.map((l, i) => `
             <div class="link-item">
@@ -1962,7 +1965,7 @@ function renderLinksSection() {
                 <div class="link-actions">
                     <button class="link-move" onclick="moveLinkOrder('${esc(l.id)}',-1)" title="위로" ${i===0?'disabled':''}>↑</button>
                     <button class="link-move" onclick="moveLinkOrder('${esc(l.id)}',1)" title="아래로" ${i===items.length-1?'disabled':''}>↓</button>
-                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}')" title="${otherLabel}으로 이동">↔</button>
+                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}')" title="다음 섹션으로 이동">↔</button>
                     <button class="link-open" onclick="openLink('${esc(l.id)}')">열기</button>
                     <button class="link-move" onclick="openEditLink('${esc(l.id)}')" title="수정" style="font-size:.82rem">✎</button>
                     <button class="link-del" onclick="removeLink('${esc(l.id)}')" title="삭제">✕</button>
@@ -1972,12 +1975,16 @@ function renderLinksSection() {
 
     grid.innerHTML = `<div class="links-cols">
         <div>
-            <div class="links-col-head">작업 참고 사이트</div>
-            <div class="links-col">${renderCol(refLinks, '관리용 시트')}</div>
+            <div class="links-col-head">작업참고</div>
+            <div class="links-col">${renderCol(refLinks)}</div>
+        </div>
+        <div>
+            <div class="links-col-head">배포용 링크</div>
+            <div class="links-col">${renderCol(depLinks)}</div>
         </div>
         <div>
             <div class="links-col-head">관리용 시트</div>
-            <div class="links-col">${renderCol(mgtLinks, '작업 참고 사이트')}</div>
+            <div class="links-col">${renderCol(mgtLinks)}</div>
         </div>
     </div>`;
 }
@@ -2034,7 +2041,8 @@ function removeLink(id) {
 function moveLinkCategory(id) {
     const l = links.find(x => x.id === id);
     if (!l) return;
-    l.category = (l.category === '관리시트') ? '참고사이트' : '관리시트';
+    const cycle = { '참고사이트': '배포링크', '배포링크': '관리시트', '관리시트': '참고사이트' };
+    l.category = cycle[l.category] || '배포링크';
     saveLinks();
 }
 function moveLinkOrder(id, dir) {
