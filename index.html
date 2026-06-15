@@ -1954,7 +1954,10 @@ function renderLinksSection() {
     const depLinks = links.filter(l => l.category === '배포링크');
     const mgtLinks = links.filter(l => l.category === '관리시트');
 
-    function renderCol(items) {
+    const CATS = ['참고사이트', '배포링크', '관리시트'];
+
+    function renderCol(items, catKey) {
+        const catIdx = CATS.indexOf(catKey);
         if (!items.length) return `<div style="color:var(--muted);font-size:.8rem;padding:4px 0">없음</div>`;
         return items.map((l, i) => `
             <div class="link-item">
@@ -1965,7 +1968,8 @@ function renderLinksSection() {
                 <div class="link-actions">
                     <button class="link-move" onclick="moveLinkOrder('${esc(l.id)}',-1)" title="위로" ${i===0?'disabled':''}>↑</button>
                     <button class="link-move" onclick="moveLinkOrder('${esc(l.id)}',1)" title="아래로" ${i===items.length-1?'disabled':''}>↓</button>
-                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}')" title="다음 섹션으로 이동">↔</button>
+                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}',-1)" title="왼쪽 섹션으로" ${catIdx===0?'disabled':''}>←</button>
+                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}',1)" title="오른쪽 섹션으로" ${catIdx===CATS.length-1?'disabled':''}>→</button>
                     <button class="link-open" onclick="openLink('${esc(l.id)}')">열기</button>
                     <button class="link-move" onclick="openEditLink('${esc(l.id)}')" title="수정" style="font-size:.82rem">✎</button>
                     <button class="link-del" onclick="removeLink('${esc(l.id)}')" title="삭제">✕</button>
@@ -1976,15 +1980,15 @@ function renderLinksSection() {
     grid.innerHTML = `<div class="links-cols">
         <div>
             <div class="links-col-head">작업참고</div>
-            <div class="links-col">${renderCol(refLinks)}</div>
+            <div class="links-col">${renderCol(refLinks, '참고사이트')}</div>
         </div>
         <div>
             <div class="links-col-head">배포용 링크</div>
-            <div class="links-col">${renderCol(depLinks)}</div>
+            <div class="links-col">${renderCol(depLinks, '배포링크')}</div>
         </div>
         <div>
             <div class="links-col-head">관리용 시트</div>
-            <div class="links-col">${renderCol(mgtLinks)}</div>
+            <div class="links-col">${renderCol(mgtLinks, '관리시트')}</div>
         </div>
     </div>`;
 }
@@ -2038,11 +2042,14 @@ function removeLink(id) {
     links = links.filter(l => l.id !== id);
     saveLinks(); showToast('링크가 삭제되었습니다.');
 }
-function moveLinkCategory(id) {
+function moveLinkCategory(id, dir) {
     const l = links.find(x => x.id === id);
     if (!l) return;
-    const cycle = { '참고사이트': '배포링크', '배포링크': '관리시트', '관리시트': '참고사이트' };
-    l.category = cycle[l.category] || '배포링크';
+    const cats = ['참고사이트', '배포링크', '관리시트'];
+    const idx = cats.indexOf(l.category || '참고사이트');
+    const next = idx + dir;
+    if (next < 0 || next >= cats.length) return;
+    l.category = cats[next];
     saveLinks();
 }
 function moveLinkOrder(id, dir) {
