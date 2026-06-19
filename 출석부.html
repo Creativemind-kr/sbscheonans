@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>훈련과정 출석부 자동 생성기 (통합형)</title>
+    <style>
+        :root {
+            --ink: #111;
+            --line: #111;
+            --muted: #667085;
+            --panel: #f7f8fb;
+            --accent: #0c52c5;
+            --danger: #d92d20;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            color: var(--ink);
+            background: #eef1f5;
+            font-family: "Malgun Gothic", "Apple SD Gothic Neo", Arial, sans-serif;
+        }
+
+        /* 탭 네비게이션 */
+        .tab-nav {
+            display: flex;
+            gap: 0;
+            background: #1e3a5f;
+            padding: 0 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .tab-btn {
+            min-height: 48px;
+            padding: 12px 22px;
+            border: none;
+            border-radius: 0;
+            background: transparent;
+            color: rgba(255,255,255,0.65);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: color 0.15s, border-color 0.15s;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            border-bottom-color: #4dabf7;
+        }
+
+        .tab-panel {
+            display: none;
+            padding: 20px;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* 사용설명서 스타일 */
+        .manual-wrap {
+            max-width: 780px;
+            margin: 0 auto;
+        }
+
+        .manual-header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0c52c5 100%);
+            color: #fff;
+            border-radius: 10px;
+            padding: 28px 32px 22px;
+            margin-bottom: 24px;
+        }
+
+        .manual-header h2 {
+            margin: 0 0 6px;
+            font-size: 22px;
+            letter-spacing: -0.3px;
+        }
+
+        .manual-header p {
+            margin: 0;
+            opacity: 0.8;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .manual-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .step-card {
+            background: #fff;
+            border: 1px solid #e4e7ec;
+            border-radius: 8px;
+            padding: 16px 20px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            box-shadow: 0 1px 4px rgba(15,23,42,0.05);
+        }
+
+        .step-num {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 14px;
+            margin-top: 1px;
+        }
+
+        .step-body h3 {
+            margin: 0 0 5px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #1a1a2e;
+        }
+
+        .step-body p {
+            margin: 0;
+            font-size: 13px;
+            color: #444;
+            line-height: 1.65;
+        }
+
+        .step-body .tip {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 4px 10px;
+            background: #f0f4ff;
+            border-left: 3px solid var(--accent);
+            border-radius: 0 4px 4px 0;
+            font-size: 12px;
+            color: #0c52c5;
+            line-height: 1.5;
+        }
+
+        .step-body code {
+            background: #f3f4f6;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            color: #d92d20;
+        }
+
+        .checklist {
+            background: #fff;
+            border: 1px solid #e4e7ec;
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 4px rgba(15,23,42,0.05);
+        }
+
+        .checklist h3 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #1a1a2e;
+        }
+
+        .checklist ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .checklist li {
+            font-size: 13px;
+            color: #333;
+            line-height: 2;
+            font-weight: 700;
+        }
+
+        .faq-section {
+            background: #fff;
+            border: 1px solid #e4e7ec;
+            border-radius: 8px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 4px rgba(15,23,42,0.05);
+        }
+
+        .faq-section h3 {
+            margin: 0 0 14px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #1a1a2e;
+        }
+
+        .faq-item {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .faq-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .faq-q {
+            font-size: 13px;
+            font-weight: 800;
+            color: #0c52c5;
+            margin-bottom: 3px;
+        }
+
+        .faq-a {
+            font-size: 13px;
+            color: #444;
+            line-height: 1.6;
+        }
+
+        .goto-btn {
+            display: block;
+            width: 100%;
+            margin-top: 20px;
+            padding: 14px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 800;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            letter-spacing: 0.3px;
+        }
+
+        .goto-btn:hover {
+            background: #0a44a8;
+        }
+
+        .control-panel {
+            max-width: 1180px;
+            margin: 0 auto 18px;
+            padding: 18px;
+            background: #fff;
+            border: 1px solid #e4e7ec;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+        }
+
+        .control-panel h1 {
+            margin: 0 0 6px;
+            font-size: 20px;
+        }
+
+        .control-panel p {
+            margin: 0 0 14px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        textarea {
+            display: block;
+            width: 100%;
+            height: 135px;
+            padding: 12px;
+            resize: vertical;
+            border: 1px solid #d0d5dd;
+            border-radius: 6px;
+            font: 13px/1.5 Consolas, "Malgun Gothic", monospace;
+        }
+
+        .source-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .source-box {
+            min-width: 0;
+        }
+
+        .source-box textarea {
+            height: 145px;
+        }
+
+        .source-detail-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr 0.8fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .source-detail-grid input {
+            min-height: 32px;
+            padding: 6px 8px;
+            font-size: 12px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: minmax(240px, 1fr);
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .student-filter {
+            max-width: 360px;
+        }
+
+        .field-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #344054;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        input,
+        select {
+            width: 100%;
+            min-height: 38px;
+            padding: 8px 10px;
+            border: 1px solid #d0d5dd;
+            border-radius: 6px;
+            background: #fff;
+            font: inherit;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        button {
+            min-height: 38px;
+            padding: 8px 16px;
+            border: 0;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            color: var(--ink);
+            background: #eaecf0;
+        }
+
+        .btn-generate { background: var(--accent); }
+        .btn-print { background: var(--danger); }
+
+        .status {
+            margin-left: auto;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        #printArea {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 13mm 12mm;
+            background: #fff;
+            box-shadow: 0 4px 22px rgba(15, 23, 42, 0.12);
+        }
+
+        .empty-state {
+            display: grid;
+            min-height: 180px;
+            place-items: center;
+            color: var(--muted);
+            border: 1px dashed #d0d5dd;
+            background: var(--panel);
+        }
+
+        .sheet {
+            page-break-after: always;
+            width: 100%;
+            min-height: 271mm;
+            padding: 0;
+            font-size: 10.5pt;
+        }
+
+        .sheet:last-child { page-break-after: auto; }
+
+        .sheet-title {
+            margin: 0 0 1.5mm;
+            text-align: center;
+            font-size: 21pt;
+            font-weight: 800;
+            letter-spacing: 0;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+
+        .sheet-subtitle {
+            margin: 0 0 5mm;
+            text-align: center;
+            font-size: 11pt;
+            font-weight: 700;
+        }
+
+        .top-grid {
+            display: grid;
+            grid-template-columns: 1fr 58mm;
+            gap: 3mm;
+            margin-bottom: 3mm;
+            align-items: start;
+        }
+
+        .meta-table,
+        .approval-table,
+        .attend-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .meta-table th,
+        .meta-table td,
+        .approval-table th,
+        .approval-table td,
+        .attend-table th,
+        .attend-table td {
+            border: 1px solid var(--line);
+            color: var(--ink);
+        }
+
+        .meta-table th,
+        .meta-table td {
+            height: 8mm;
+            padding: 1.3mm 1.8mm;
+            text-align: left;
+            vertical-align: middle;
+            font-size: 9pt;
+            line-height: 1.25;
+        }
+
+        .meta-table th {
+            width: 24mm;
+            background: #fff;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .meta-table .period-label { width: 24mm; }
+        .meta-table .period-value { width: 31mm; }
+        .meta-table .days-label { width: 34mm; }
+        .meta-table .days-value { width: 22mm; }
+        .meta-table .allowance-label { width: 34mm; }
+        .meta-table .allowance-value {
+            width: 35mm;
+            line-height: 1.3;
+            white-space: nowrap;
+        }
+
+        .meta-table td[contenteditable="true"],
+        .attend-table td[contenteditable="true"],
+        .approval-table td[contenteditable="true"] {
+            cursor: text;
+            outline: 1px dashed transparent;
+        }
+
+        .meta-table td[contenteditable="true"]:focus,
+        .attend-table td[contenteditable="true"]:focus,
+        .approval-table td[contenteditable="true"]:focus {
+            outline-color: #0c52c5;
+            background: #f5f8ff;
+        }
+
+        .approval-table th,
+        .approval-table td {
+            height: 10mm;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 9.5pt;
+            font-weight: 800;
+        }
+
+        .approval-table .approval-title {
+            width: 11mm;
+            height: 34mm;
+        }
+
+        .approval-table .approval-stamp {
+            height: 24mm;
+        }
+
+        .attend-table {
+            margin-top: 1mm;
+            text-align: center;
+            font-size: 8pt;
+        }
+
+        .attend-table th,
+        .attend-table td {
+            height: 7.15mm;
+            padding: 0.6mm 0.4mm;
+            vertical-align: middle;
+            line-height: 1.15;
+            overflow-wrap: normal;
+            word-break: keep-all;
+            white-space: nowrap;
+        }
+
+        .attend-table th {
+            font-weight: 800;
+        }
+
+        .attend-table .header-top th {
+            height: 12mm;
+        }
+
+        .attend-table .header-sub th {
+            height: 8.5mm;
+        }
+
+        .attend-table .narrow { width: 6.5mm; }
+        .attend-table .time { width: 16mm; }
+        .attend-table .actual-time { width: 16.5mm; }
+        .attend-table .reason { width: 26mm; }
+        .attend-table .count { width: 9mm; }
+        .attend-table .late-total { width: 18mm; }
+        .attend-table .confirm { width: 13mm; }
+        .attend-table .small-head { font-size: 6.6pt; }
+        .attend-table .wrap-head {
+            white-space: normal;
+            line-height: 1.15;
+        }
+        .attend-table .total-row td {
+            height: 8mm;
+            font-weight: 800;
+            background: #fff;
+        }
+
+        .sheet.print-fit {
+            transform: scale(var(--print-scale, 1));
+            transform-origin: top left;
+            width: calc(100% / var(--print-scale, 1));
+        }
+
+        .footer-sign {
+            margin-top: 7mm;
+            text-align: center;
+            font-size: 11pt;
+            font-weight: 800;
+            line-height: 1.9;
+        }
+
+        .signature-line {
+            display: inline-block;
+            width: 52mm;
+            border-bottom: 0;
+        }
+
+        @media (max-width: 900px) {
+            .tab-panel { padding: 12px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .source-grid { grid-template-columns: 1fr; }
+            #printArea {
+                width: 100%;
+                min-height: auto;
+                padding: 12px;
+            }
+            .top-grid { grid-template-columns: 1fr; }
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 8mm 9mm;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+                background: #fff;
+            }
+
+            .tab-nav { display: none; }
+            .tab-panel { display: block !important; padding: 0; }
+            .manual-wrap { display: none; }
+            .control-panel { display: none; }
+
+            #printArea {
+                width: 100%;
+                min-height: auto;
+                padding: 0;
+                box-shadow: none;
+            }
+
+            .sheet {
+                min-height: auto;
+            }
+
+            .sheet-title {
+                margin-bottom: 1mm;
+                font-size: 18pt;
+            }
+
+            .sheet-subtitle {
+                margin-bottom: 3mm;
+                font-size: 9.5pt;
+            }
+
+            .top-grid {
+                grid-template-columns: 1fr 58mm;
+                gap: 2mm;
+                margin-bottom: 2mm;
+            }
+
+            .meta-table th,
+            .meta-table td {
+                height: 6.5mm;
+                padding: 0.8mm 1.2mm;
+                font-size: 8pt;
+                line-height: 1.18;
+            }
+
+            .approval-table th,
+            .approval-table td {
+                height: 8mm;
+                font-size: 8.5pt;
+            }
+
+            .approval-table .approval-title {
+                height: 28mm;
+            }
+
+            .approval-table .approval-stamp {
+                height: 20mm;
+            }
+
+            .attend-table {
+                font-size: 6.9pt;
+            }
+
+            .attend-table th,
+            .attend-table td {
+                height: 5.4mm;
+                padding: 0.35mm 0.25mm;
+                line-height: 1.05;
+                white-space: nowrap;
+            }
+
+            .attend-table .header-top th {
+                height: 9mm;
+            }
+
+            .attend-table .header-sub th {
+                height: 6.4mm;
+            }
+
+            .attend-table .small-head {
+                font-size: 5.9pt;
+            }
+
+            .attend-table .wrap-head {
+                white-space: normal;
+            }
+
+            .attend-table .total-row td {
+                height: 6mm;
+            }
+
+            .meta-table td[contenteditable="true"],
+            .attend-table td[contenteditable="true"],
+            .approval-table td[contenteditable="true"] {
+                outline: none;
+            }
+
+            .footer-sign {
+                margin-top: 3mm;
+                font-size: 9.5pt;
+                line-height: 1.55;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="manual" onclick="switchTab('manual')">사용설명서</button>
+        <button class="tab-btn" data-tab="generator" onclick="switchTab('generator')">출석부 생성기</button>
+    </nav>
+
+    <!-- 탭 1: 사용설명서 -->
+    <div id="tab-manual" class="tab-panel active">
+        <div class="manual-wrap">
+            <div class="manual-header">
+                <h2>출석부 자동 생성기 사용설명서</h2>
+                <p>인트라넷 출석 페이지의 HTML 코드를 붙여넣으면 고용노동부 양식의 출석부를 자동으로 만들어 드립니다.</p>
+            </div>
+
+            <div class="manual-steps">
+                <div class="step-card">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <h3>인트라넷에서 출석부 화면 열기</h3>
+                        <p>인트라넷에서 출석부 페이지를 엽니다. 훈련생 목록과 출결 현황이 보이는 화면이면 됩니다.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <h3>HTML 코드 복사하기</h3>
+                        <p>출석부 화면에서 마우스 우클릭 → <strong>페이지 소스 보기</strong>를 누른 뒤, 열린 탭에서 전체 선택(<code>Ctrl+A</code>) 후 복사(<code>Ctrl+C</code>)합니다.</p>
+                        <span class="tip">소스가 길어도 괜찮습니다. 스크립트가 포함되어 있어도 됩니다.</span>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <h3>소스 칸에 붙여넣기</h3>
+                        <p>생성기 탭의 <strong>소스 1</strong> 칸에 출석부 소스를, <strong>소스 2</strong> 칸에 출석부 소스를 붙여넣습니다.<br>
+                        그러면 출결 현황이 한 장의 출석부에 합쳐져서 생성됩니다.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <h3>과목명·시작·종료 시간 확인</h3>
+                        <p>소스 아래 입력칸에 <strong>과정명, 시작 시간, 종료 시간</strong>이 자동으로 채워집니다.<br>
+                        잘못 들어왔으면 직접 수정합니다. 특히 종료 시간은 꼭 확인하세요.</p>
+                        <span class="tip">예) 캐드1 / 11:00 / 13:00</span>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">5</div>
+                    <div class="step-body">
+                        <h3>훈련생 불러오기</h3>
+                        <p><strong>[훈련생 불러오기]</strong> 버튼을 누릅니다. 훈련생 목록이 아래 선택창에 나타납니다.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">6</div>
+                    <div class="step-body">
+                        <h3>훈련생 선택</h3>
+                        <p>선택창에서 원하는 훈련생을 고릅니다.<br>
+                        전체 훈련생의 출석부를 한 번에 만들려면 <strong>전체 훈련생</strong>을 선택합니다.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">7</div>
+                    <div class="step-body">
+                        <h3>출석부 생성</h3>
+                        <p><strong>[출석부 생성]</strong> 버튼을 누릅니다. 화면 아래에 출석부가 만들어집니다.<br>
+                        여러 소스를 넣은 경우 같은 훈련생이면 날짜순으로 합쳐집니다.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">8</div>
+                    <div class="step-body">
+                        <h3>내용 수정하기</h3>
+                        <p>만들어진 출석부의 칸을 직접 클릭해서 수정할 수 있습니다.</p>
+                        <span class="tip">수정 가능: 훈련생 성명 · 훈련 기관명 · 과정명 · 훈련 기간 · 출석일수 · 날짜·시간·출결 값 · 합계 · 확인란</span>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">9</div>
+                    <div class="step-body">
+                        <h3>출력하기</h3>
+                        <p><strong>[출력하기]</strong> 버튼을 누르면 A4 한 장에 맞게 자동 조정된 후 인쇄 대화창이 열립니다.</p>
+                        <span class="tip">인쇄 화면에서 주소·날짜·페이지 번호가 보이면 브라우저 인쇄 설정에서 <strong>"머리글과 바닥글"을 꺼주세요</strong>.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="checklist">
+                <h3>순서 요약 (꼭 기억하세요)</h3>
+                <ol>
+                    <li>소스 1, 소스 2 칸에 인트라넷 HTML을 각각 붙여넣는다.</li>
+                    <li>[훈련생 불러오기]를 먼저 누른다.</li>
+                    <li>과정명·시작·종료 시간이 맞는지 확인한다.</li>
+                    <li>훈련생을 고른다.</li>
+                    <li>[출석부 생성]을 누른다.</li>
+                    <li>필요한 칸을 직접 고친다.</li>
+                    <li>[출력하기]를 누른다.</li>
+                </ol>
+            </div>
+
+            <button class="goto-btn" onclick="switchTab('generator')">출석부 생성기로 이동 →</button>
+        </div>
+    </div>
+
+    <!-- 탭 2: 출석부 생성기 -->
+    <div id="tab-generator" class="tab-panel">
+    <section class="control-panel">
+        <h1>훈련과정 출석부 자동 생성기 (통합형)</h1>
+        <p>인트라넷 출석 페이지의 HTML 전체를 붙여넣으세요. 소스 1, 소스 2을 넣으면 한 장으로 합쳐집니다.</p>
+
+        <div class="source-grid">
+            <div class="source-box">
+                <label class="field-label" for="sourceData1">소스 1</label>
+                <textarea id="sourceData1" class="source-data" placeholder="첫 번째 인트라넷 HTML 또는 JSON"></textarea>
+                <div class="source-detail-grid">
+                    <input type="text" id="sourceCourse1" class="source-course" placeholder="과정명">
+                    <input type="text" id="sourceStart1" class="source-start" placeholder="시작">
+                    <input type="text" id="sourceEnd1" class="source-end" placeholder="종료">
+                </div>
+            </div>
+            <div class="source-box">
+                <label class="field-label" for="sourceData2">소스 2</label>
+                <textarea id="sourceData2" class="source-data" placeholder="두 번째 인트라넷 HTML 또는 JSON"></textarea>
+                <div class="source-detail-grid">
+                    <input type="text" id="sourceCourse2" class="source-course" placeholder="과정명">
+                    <input type="text" id="sourceStart2" class="source-start" placeholder="시작">
+                    <input type="text" id="sourceEnd2" class="source-end" placeholder="종료">
+                </div>
+            </div>
+            <div class="source-box">
+                <label class="field-label" for="sourceData3">소스 3</label>
+                <textarea id="sourceData3" class="source-data" placeholder="세 번째 인트라넷 HTML 또는 JSON"></textarea>
+                <div class="source-detail-grid">
+                    <input type="text" id="sourceCourse3" class="source-course" placeholder="과정명">
+                    <input type="text" id="sourceStart3" class="source-start" placeholder="시작">
+                    <input type="text" id="sourceEnd3" class="source-end" placeholder="종료">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="student-filter">
+                <label class="field-label" for="studentSelect">훈련생 선택</label>
+                <select id="studentSelect">
+                    <option value="">소스를 넣고 불러오기를 눌러주세요</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-secondary" onclick="loadStudents()">훈련생 불러오기</button>
+            <button class="btn-generate" onclick="generateSheet()">출석부 생성</button>
+            <button class="btn-print" onclick="printOnePage()">출력하기</button>
+            <span id="statusText" class="status">준비됨</span>
+        </div>
+    </section>
+
+    <div id="printArea">
+        <div class="empty-state">
+            데이터를 입력하고 [출석부 생성] 버튼을 눌러주세요.
+        </div>
+    </div>
+
+    </div><!-- /tab-generator -->
+
+    <script>
+        function switchTab(name) {
+            document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.getElementById("tab-" + name).classList.add("active");
+            document.querySelector(`.tab-btn[data-tab="${name}"]`).classList.add("active");
+        }
+
+        let parsedPayload = null;
+        const MIN_BODY_ROWS = 10;
+        const A4_CONTENT_HEIGHT_MM = 271;
+
+        function setStatus(message) {
+            document.getElementById("statusText").textContent = message;
+        }
+
+        function htmlDecode(text) {
+            const textarea = document.createElement("textarea");
+            textarea.innerHTML = text;
+            return textarea.value;
+        }
+
+        function extractJsonText(rawText) {
+            const text = rawText.trim();
+            if (!text) throw new Error("입력된 데이터가 없습니다.");
+            if (text.startsWith("{") || text.startsWith("[")) return text;
+
+            const ckDataMatch = text.match(/tool\.getCkVData\(\s*'([\s\S]*?)'\s*,/);
+            if (ckDataMatch) return htmlDecode(ckDataMatch[1]);
+
+            const jsonStart = text.indexOf('{"success"');
+            const resultsStart = text.indexOf('{"results"');
+            const start = jsonStart >= 0 ? jsonStart : resultsStart;
+            if (start >= 0) {
+                const end = text.indexOf("]}',", start);
+                if (end >= 0) return htmlDecode(text.slice(start, end + 2));
+            }
+            throw new Error("HTML 안에서 JSON 데이터를 찾지 못했습니다.");
+        }
+
+        function extractJsonPayloads(rawText) {
+            const text = rawText.trim();
+            if (!text) throw new Error("입력된 데이터가 없습니다.");
+            if (text.startsWith("{") || text.startsWith("[")) return [{ jsonText: text, contextText: text }];
+
+            const payloads = [];
+            const pattern = /tool\.getCkVData\(\s*'([\s\S]*?)'\s*,/g;
+            let match;
+            let previousEnd = 0;
+
+            while ((match = pattern.exec(text)) !== null) {
+                const contextText = text.slice(previousEnd, match.index);
+                payloads.push({ jsonText: htmlDecode(match[1]), contextText: contextText || text });
+                previousEnd = pattern.lastIndex;
+            }
+
+            if (payloads.length > 0) return dedupePayloads(payloads);
+            return [{ jsonText: extractJsonText(text), contextText: text }];
+        }
+
+        function dedupePayloads(payloads) {
+            const seen = new Set();
+            return payloads.filter(payload => {
+                const key = normalizeJsonText(payload.jsonText);
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        function normalizeJsonText(jsonText) {
+            try { return JSON.stringify(JSON.parse(jsonText)); } catch (e) { return jsonText.trim(); }
+        }
+
+        function getRawSourceText() {
+            return Array.from(document.querySelectorAll(".source-data"))
+                .map(box => box.value.trim())
+                .filter(Boolean)
+                .join("\n\n");
+        }
+
+        function getSourceBlocks() {
+            return Array.from(document.querySelectorAll(".source-box")).map((box, index) => ({
+                index,
+                sourceText: (box.querySelector(".source-data")?.value || "").trim(),
+                courseEl: box.querySelector(".source-course"),
+                startEl: box.querySelector(".source-start"),
+                endEl: box.querySelector(".source-end")
+            })).filter(block => block.sourceText);
+        }
+
+        function getInputValueFromHtml(htmlText, name) {
+            const pattern = new RegExp(`<input[^>]*name=["']${name}["'][^>]*value=["']([^"']*)["']`, "i");
+            const match = htmlText.match(pattern);
+            return match ? htmlDecode(match[1]).trim() : "";
+        }
+
+        function getLabelValueFromHtml(htmlText, label) {
+            const normalized = htmlText.replace(/\s+/g, " ");
+            const pattern = new RegExp(`<strong>\\s*${label}\\s*:\\s*<\\/strong>\\s*([^<|]+)`, "i");
+            const match = normalized.match(pattern);
+            return match ? htmlDecode(match[1]).trim() : "";
+        }
+
+        function inferEndTime(startTime, hoursToAdd = 2) {
+            const minutes = timeToMinutes(startTime);
+            return minutes === null ? "" : minutesToTime(minutes + hoursToAdd * 60);
+        }
+
+        function inferFormValues(data, contextText) {
+            const rawText = contextText || "";
+            const courseName = getInputValueFromHtml(rawText, "ShortName") || getLabelValueFromHtml(rawText, "과목");
+            const startTime = getInputValueFromHtml(rawText, "BeginTime") || getInputValueFromHtml(rawText, "CurBeginTime") || getLabelValueFromHtml(rawText, "시간");
+            const endTime = getInputValueFromHtml(rawText, "EndTime") || getInputValueFromHtml(rawText, "CurEndTime") || inferEndTime(startTime);
+            return {
+                courseName: courseName || "훈련 과정명",
+                startTime: startTime || "09:00",
+                endTime: endTime || inferEndTime(startTime || "09:00") || "11:00"
+            };
+        }
+
+        function parseAttendanceData() {
+            const sourceBlocks = getSourceBlocks();
+            if (sourceBlocks.length === 0) throw new Error("입력된 소스가 없습니다.");
+
+            const sessions = sourceBlocks.flatMap(block => {
+                const payloads = extractJsonPayloads(block.sourceText);
+                return payloads.map((payload, pIdx) => {
+                    const data = JSON.parse(payload.jsonText);
+                    if (!data || !Array.isArray(data.results)) throw new Error("결과 데이터가 없는 JSON입니다.");
+                    
+                    const inferred = inferFormValues(data, payload.contextText || block.sourceText);
+                    const courseName = block.courseEl.value.trim() || inferred.courseName;
+                    const startTime = block.startEl.value.trim() || inferred.startTime;
+                    const endTime = block.endEl.value.trim() || inferred.endTime;
+
+                    block.courseEl.value = courseName;
+                    block.startEl.value = startTime;
+                    block.endEl.value = endTime;
+
+                    return { courseName, startTime, endTime, index: block.index, results: data.results };
+                });
+            });
+
+            return { sessions };
+        }
+
+        function getStudentKey(row) {
+            if (row.StudentSeq) return `seq:${row.StudentSeq}`;
+            const name = String(row.StudentName || "").replace(/\s+/g, "");
+            const paperNo = String(row.PaperNo || "");
+            return `name:${name}|paper:${paperNo}`;
+        }
+
+        function getDateKeysFromRow(row) {
+            return Object.keys(row).filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key)).sort();
+        }
+
+        function getAttendanceParts(value) {
+            if (!value) return { state: "-", face: "N" };
+            const [state = "-", face = "N"] = String(value).split("|");
+            return { state, face };
+        }
+
+        function getStudents(data) {
+            const studentsByKey = new Map();
+
+            data.sessions.forEach(session => {
+                session.results
+                    .filter(row => Number(row.StudentType) === 0)
+                    .forEach(row => {
+                        const key = getStudentKey(row);
+                        if (!studentsByKey.has(key)) {
+                            studentsByKey.set(key, {
+                                ...row,
+                                _entries: [],
+                                _courseNames: new Set()
+                            });
+                        }
+                        const student = studentsByKey.get(key);
+                        student._courseNames.add(session.courseName);
+
+                        getDateKeysFromRow(row).forEach(date => {
+                            // 날짜 중복 시에도 모든 세션의 정보를 추가 (병합을 위해)
+                            student._entries.push({
+                                date,
+                                value: row[date],
+                                courseName: session.courseName,
+                                startTime: session.startTime,
+                                endTime: session.endTime,
+                                sessionIndex: session.index
+                            });
+                        });
+                    });
+            });
+
+            return Array.from(studentsByKey.values()).map(student => {
+                // 날짜별로 정렬하되, 동일 날짜 내에서는 세션 인덱스 순으로 정렬
+                student._entries.sort((a, b) => {
+                    if (a.date !== b.date) return a.date.localeCompare(b.date);
+                    return a.sessionIndex - b.sessionIndex;
+                });
+                
+                // 중복 날짜 처리: 동일 날짜에 데이터가 여러 개면 상태가 있는 것을 우선함
+                const uniqueEntries = [];
+                student._entries.forEach(entry => {
+                    const existing = uniqueEntries.find(e => e.date === entry.date);
+                    if (!existing) {
+                        uniqueEntries.push(entry);
+                    } else {
+                        const existingParts = getAttendanceParts(existing.value);
+                        const currentParts = getAttendanceParts(entry.value);
+                        if (existingParts.state === "-" && currentParts.state !== "-") {
+                            Object.assign(existing, entry);
+                        }
+                    }
+                });
+                student._entries = uniqueEntries;
+                student._courseNameText = Array.from(student._courseNames).filter(Boolean).join(" / ");
+                return student;
+            }).sort((a, b) => String(a.StudentName).localeCompare(String(b.StudentName), "ko"));
+        }
+
+        function getDateKeys(students) {
+            const dateSet = new Set();
+            students.forEach(student => {
+                student._entries.forEach(entry => dateSet.add(entry.date));
+            });
+            return Array.from(dateSet).sort();
+        }
+
+        function td(value, options = {}) {
+            const isEmpty = value === null || value === undefined || value === "";
+            const editable = options.editable !== false;
+            const colSpan = options.colspan ? ` colspan="${options.colspan}"` : "";
+            const className = options.className ? ` class="${options.className}"` : "";
+            const editableAttr = editable ? ' contenteditable="true"' : "";
+            return `<td${colSpan}${className}${editableAttr}>${isEmpty ? "" : value}</td>`;
+        }
+
+        function editableCell(value, options = {}) {
+            const colSpan = options.colspan ? ` colspan="${options.colspan}"` : "";
+            const className = options.className ? ` class="${options.className}"` : "";
+            return `<td${colSpan}${className} contenteditable="true">${value ?? ""}</td>`;
+        }
+
+        function blankAttendanceRowHtml(className = "") {
+            const rowClass = className ? ` class="${className}"` : "";
+            return `<tr${rowClass}>${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}${td("")}</tr>`;
+        }
+
+        function formatDateRangeValue(date) { return date ? date.replace(/-/g, ".") : ""; }
+
+        function getTodayText() {
+            const today = new Date();
+            return `${today.getFullYear()}.  ${String(today.getMonth() + 1).padStart(2, "0")}.  ${String(today.getDate()).padStart(2, "0")}.`;
+        }
+
+        function fitSheetsToOnePage() {
+            const mmToPx = 96 / 25.4;
+            const availableHeight = (297 - 16) * mmToPx;
+            document.querySelectorAll(".sheet").forEach(sheet => {
+                sheet.classList.remove("print-fit");
+                sheet.style.removeProperty("--print-scale");
+                const scale = Math.min(1, availableHeight / sheet.scrollHeight);
+                sheet.style.setProperty("--print-scale", String(Math.max(0.72, scale - 0.02)));
+                sheet.classList.add("print-fit");
+            });
+        }
+
+        function fillSheetsToPageHeight() {
+            const mmToPx = 96 / 25.4;
+            const targetHeight = (A4_CONTENT_HEIGHT_MM - 4) * mmToPx;
+            function contentBottom(sheet) {
+                const footer = sheet.querySelector(".footer-sign");
+                const target = footer || sheet.lastElementChild;
+                if (!target) return 0;
+                const sheetRect = sheet.getBoundingClientRect();
+                const targetRect = target.getBoundingClientRect();
+                return targetRect.bottom - sheetRect.top;
+            }
+            document.querySelectorAll(".sheet").forEach(sheet => {
+                const tableBody = sheet.querySelector(".attend-table tbody");
+                const totalRow = sheet.querySelector(".total-row");
+                if (!tableBody || !totalRow) return;
+                sheet.classList.remove("print-fit");
+                sheet.style.removeProperty("--print-scale");
+                tableBody.querySelectorAll(".auto-fill-row").forEach(row => row.remove());
+                let guard = 0;
+                while (contentBottom(sheet) < targetHeight && guard < 80) {
+                    totalRow.insertAdjacentHTML("beforebegin", blankAttendanceRowHtml("auto-fill-row"));
+                    guard += 1;
+                }
+                const fillRows = Array.from(tableBody.querySelectorAll(".auto-fill-row"));
+                while (contentBottom(sheet) > targetHeight && fillRows.length > 0) {
+                    fillRows.pop().remove();
+                }
+            });
+        }
+
+        function printOnePage() {
+            fillSheetsToPageHeight();
+            fitSheetsToOnePage();
+            window.print();
+        }
+
+        function timeToMinutes(timeText) {
+            if (!timeText) return null;
+            const [hours, minutes] = timeText.split(":").map(Number);
+            if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+            return hours * 60 + minutes;
+        }
+
+        function minutesToTime(totalMinutes) {
+            if (!Number.isFinite(totalMinutes)) return "";
+            const normalized = (totalMinutes + 1440) % 1440;
+            const hours = Math.floor(normalized / 60);
+            const minutes = normalized % 60;
+            return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+        }
+
+        function getStateCounts(student) {
+            return student._entries.reduce((acc, entry) => {
+                const state = getAttendanceParts(entry.value).state;
+                if (state === "O") acc.actual += 1;
+                else if (state === "X") acc.absent += 1;
+                else if (state === "/" || state === "#") { acc.actual += 1; acc.lateLeave += 1; }
+                return acc;
+            }, { actual: 0, absent: 0, lateLeave: 0 });
+        }
+
+        function loadStudents() {
+            try {
+                parsedPayload = parseAttendanceData();
+                const students = getStudents(parsedPayload);
+                const select = document.getElementById("studentSelect");
+                if (students.length === 0) throw new Error("훈련생 데이터가 없습니다.");
+                select.innerHTML = '<option value="__all__">전체 훈련생</option>';
+                students.forEach(student => {
+                    const option = document.createElement("option");
+                    option.value = String(student.StudentSeq);
+                    option.textContent = `${student.StudentName} (${student.PaperNo || "-"})`;
+                    select.appendChild(option);
+                });
+                setStatus(`훈련생 ${students.length}명 불러옴`);
+            } catch (error) {
+                parsedPayload = null;
+                alert(`오류: ${error.message}`);
+                setStatus("실패");
+            }
+        }
+
+        function makeAttendanceRows(student) {
+            const totals = { planned: 0, actual: 0, absent: 0 };
+            const rows = student._entries.map(entry => {
+                const date = entry.date;
+                const [, month, day] = date.split("-");
+                const state = getAttendanceParts(entry.value).state;
+                const isFutureOrBlank = state === "-";
+                const planned = 1;
+                const actual = (state === "O" || state === "/" || state === "#") ? 1 : 0;
+                const absent = state === "X" ? 1 : 0;
+
+                totals.planned += planned;
+                totals.actual += isFutureOrBlank ? 0 : actual;
+                totals.absent += isFutureOrBlank ? 0 : absent;
+
+                return `<tr>${td(month)}${td(day)}${td(entry.startTime)}${td(entry.endTime)}${td("")}${td("")}${td("")}${td(planned)}${td(isFutureOrBlank ? "" : actual)}${td(isFutureOrBlank ? "" : absent)}${td("")}${td("")}${td("")}</tr>`;
+            });
+
+            while (rows.length < MIN_BODY_ROWS - 1) rows.push(blankAttendanceRowHtml());
+            rows.push(`<tr class="total-row">${td("합계", { colspan: 7 })}${td(totals.planned)}${td(totals.actual)}${td(totals.absent)}${td("")}${td("")}${td("")}</tr>`);
+            return rows.join("");
+        }
+
+        function generateSheet() {
+            try {
+                if (!parsedPayload) loadStudents();
+                const selectedStudentSeq = document.getElementById("studentSelect").value;
+                const printArea = document.getElementById("printArea");
+                let students = getStudents(parsedPayload);
+                if (selectedStudentSeq !== "__all__") {
+                    students = students.filter(student => String(student.StudentSeq) === selectedStudentSeq);
+                }
+                if (students.length === 0) throw new Error("훈련생 데이터가 없습니다.");
+
+                printArea.innerHTML = students.map(student => {
+                    const counts = getStateCounts(student);
+                    const rows = makeAttendanceRows(student);
+                    const startDate = formatDateRangeValue(student._entries[0]?.date);
+                    const endDate = formatDateRangeValue(student._entries[student._entries.length - 1]?.date);
+
+                    return `
+                        <section class="sheet">
+                            <h2 class="sheet-title">출 석 부</h2>
+                            <div class="sheet-subtitle">(훈련과정 수강자용)</div>
+                            <div class="top-grid">
+                                <table class="meta-table">
+                                    <tr><th>훈련생 성명:</th>${editableCell(student.StudentName, { colspan: 3 })}</tr>
+                                    <tr><th>훈련 기관명:</th>${editableCell("SBS아카데미컴퓨터아트학원 천안", { colspan: 3 })}</tr>
+                                    <tr><th>훈련 과정명:</th>${editableCell(student._courseNameText, { colspan: 3 })}</tr>
+                                    <tr>
+                                        <th class="period-label">훈련 기간 :</th>${editableCell(`${startDate} ~<br>${endDate}`, { className: "period-value" })}
+                                        <th class="days-label">소정훈련일수:</th>${editableCell(`${student._entries.length}일`, { className: "days-value" })}
+                                    </tr>
+                                    <tr>
+                                        <th>실제출석일수:</th>${editableCell(`${counts.actual}일`)}
+                                        <th class="allowance-label">별도 수당지급여부:</th>${editableCell("■없음,□있음<br>(금액: 원)", { className: "allowance-value" })}
+                                    </tr>
+                                </table>
+                                <table class="approval-table">
+                                    <tr><th class="approval-title" rowspan="2">결재</th><th>작성</th><th>담당</th><th>직인</th></tr>
+                                    <tr><td class="approval-stamp" contenteditable="true"></td><td class="approval-stamp" contenteditable="true"></td><td class="approval-stamp" contenteditable="true"></td></tr>
+                                </table>
+                            </div>
+                            <table class="attend-table">
+                                <tr class="header-top"><th class="narrow small-head" colspan="2">훈련일자</th><th class="time small-head" colspan="2">훈련시간</th><th class="actual-time small-head wrap-head" colspan="2">실제 훈련참여<br>시간</th><th class="reason small-head wrap-head" rowspan="2">지각, 조퇴, 외출시<br>해당 시간</th><th class="count small-head wrap-head" rowspan="2">소<br>정<br>출<br>석<br>일</th><th class="count small-head wrap-head" rowspan="2">실<br>제<br>출<br>석<br>일</th><th class="count small-head wrap-head" rowspan="2">결<br>석<br>일<br>수</th><th class="late-total small-head wrap-head" rowspan="2">지각<br>조퇴<br>외출 시간<br>합계</th><th class="confirm small-head" colspan="2">확인</th></tr>
+                                <tr class="header-sub"><th class="narrow small-head">월</th><th class="narrow small-head">일</th><th class="time small-head">시작시간</th><th class="time small-head">종료시간</th><th class="actual-time small-head">시작시간</th><th class="actual-time small-head">종료시간</th><th class="confirm small-head">훈련생</th><th class="confirm small-head">훈련교사</th></tr>
+                                ${rows}
+                            </table>
+                            <div class="footer-sign"><div>${getTodayText()}</div><div>위 내용이 사실임을 확인합니다.</div><div>국민취업지원제도 수급자(제출자) 성명: <span class="signature-line"></span> (서명 또는 인)</div></div>
+                        </section>
+                    `;
+                }).join("");
+                fillSheetsToPageHeight();
+                setStatus(`출석부 ${students.length}건 생성 완료`);
+            } catch (error) {
+                alert(`오류: ${error.message}`);
+                setStatus("실패");
+            }
+        }
+    </script>
+</body>
+</html>

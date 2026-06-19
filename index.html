@@ -789,10 +789,11 @@
         <input type="hidden" id="l-edit-id">
         <div class="form-row">
             <label>분류</label>
-            <select id="l-category">
+            <select id="l-category" onchange="onLinkCategoryChange()">
                 <option value="참고사이트">작업참고</option>
                 <option value="배포링크">배포용 링크</option>
                 <option value="관리시트">관리용 시트</option>
+                <option value="파일">📎 파일 다운로드</option>
             </select>
         </div>
         <div class="form-row">
@@ -800,7 +801,7 @@
             <input id="l-title" type="text" placeholder="예: 구글 스프레드시트">
         </div>
         <div class="form-row">
-            <label>URL *</label>
+            <label id="l-url-label">URL *</label>
             <input id="l-url" type="text" placeholder="https://...">
         </div>
         <div class="modal-actions">
@@ -1950,31 +1951,40 @@ function renderLinksSection() {
         return;
     }
 
-    const refLinks = links.filter(l => !l.category || l.category === '참고사이트');
-    const depLinks = links.filter(l => l.category === '배포링크');
-    const mgtLinks = links.filter(l => l.category === '관리시트');
+    const refLinks  = links.filter(l => !l.category || l.category === '참고사이트');
+    const depLinks  = links.filter(l => l.category === '배포링크');
+    const mgtLinks  = links.filter(l => l.category === '관리시트');
+    const fileLinks = links.filter(l => l.category === '파일');
 
     const CATS = ['참고사이트', '배포링크', '관리시트'];
 
     function renderCol(items, catKey) {
-        const catIdx = CATS.indexOf(catKey);
+        const catIdx = catKey ? CATS.indexOf(catKey) : -1;
         if (!items.length) return `<div style="color:var(--muted);font-size:.8rem;padding:4px 0">없음</div>`;
-        return items.map((l, i) => `
+        return items.map((l, i) => {
+            const isFile = l.category === '파일';
+            const actionBtn = isFile
+                ? `<a class="link-open" href="${esc(l.url)}" download style="text-decoration:none">다운로드</a>`
+                : `<button class="link-open" onclick="openLink('${esc(l.id)}')">열기</button>`;
+            const navBtns = (!isFile && catIdx >= 0) ? `
+                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}',-1)" title="왼쪽 섹션으로" ${catIdx===0?'disabled':''}>←</button>
+                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}',1)" title="오른쪽 섹션으로" ${catIdx===CATS.length-1?'disabled':''}>→</button>` : '';
+            return `
             <div class="link-item">
                 <div class="link-info">
-                    <div class="link-title">${esc(l.title)}</div>
+                    <div class="link-title">${isFile ? '📎 ' : ''}${esc(l.title)}</div>
                     <div class="link-url">${esc(l.url)}</div>
                 </div>
                 <div class="link-actions">
                     <button class="link-move" onclick="moveLinkOrder('${esc(l.id)}',-1)" title="위로" ${i===0?'disabled':''}>↑</button>
                     <button class="link-move" onclick="moveLinkOrder('${esc(l.id)}',1)" title="아래로" ${i===items.length-1?'disabled':''}>↓</button>
-                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}',-1)" title="왼쪽 섹션으로" ${catIdx===0?'disabled':''}>←</button>
-                    <button class="link-move" onclick="moveLinkCategory('${esc(l.id)}',1)" title="오른쪽 섹션으로" ${catIdx===CATS.length-1?'disabled':''}>→</button>
-                    <button class="link-open" onclick="openLink('${esc(l.id)}')">열기</button>
+                    ${navBtns}
+                    ${actionBtn}
                     <button class="link-move" onclick="openEditLink('${esc(l.id)}')" title="수정" style="font-size:.82rem">✎</button>
                     <button class="link-del" onclick="removeLink('${esc(l.id)}')" title="삭제">✕</button>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     grid.innerHTML = `<div class="links-cols">
@@ -1987,8 +1997,8 @@ function renderLinksSection() {
             <div class="links-col">${renderCol(depLinks, '배포링크')}</div>
         </div>
         <div>
-            <div class="links-col-head">관리용 시트</div>
-            <div class="links-col">${renderCol(mgtLinks, '관리시트')}</div>
+            <div class="links-col-head">관리용 시트 &amp; 파일</div>
+            <div class="links-col">${renderCol([...mgtLinks, ...fileLinks], '관리시트')}</div>
         </div>
     </div>`;
 }
@@ -2020,14 +2030,26 @@ function openEditLink(id) {
     document.getElementById('l-title').focus();
 }
 function closeLinkModal() { document.getElementById('link-overlay').classList.remove('show'); }
+function onLinkCategoryChange() {
+    const cat = document.getElementById('l-category').value;
+    const urlInput = document.getElementById('l-url');
+    const label = document.getElementById('l-url-label');
+    if (cat === '파일') {
+        urlInput.placeholder = '파일명 (예: 출석부.html)';
+        label.textContent = '파일명 *';
+    } else {
+        urlInput.placeholder = 'https://...';
+        label.textContent = 'URL *';
+    }
+}
 function saveLink() {
     const editId   = document.getElementById('l-edit-id').value;
     const title    = document.getElementById('l-title').value.trim();
     const category = document.getElementById('l-category').value;
     let url = document.getElementById('l-url').value.trim();
     if (!title) { showToast('링크 제목을 입력하세요.'); return; }
-    if (!url)   { showToast('URL을 입력하세요.'); return; }
-    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    if (!url)   { showToast('URL 또는 파일명을 입력하세요.'); return; }
+    if (category !== '파일' && !/^https?:\/\//i.test(url)) url = 'https://' + url;
     if (editId) {
         const l = links.find(x => x.id === editId);
         if (l) { l.title = title; l.url = url; l.category = category; }
