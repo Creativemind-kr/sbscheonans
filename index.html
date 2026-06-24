@@ -17,7 +17,7 @@
             --text: #1E293B; --muted: #64748B;
             --red: #EF4444; --amber: #F59E0B; --green: #10B981;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
         /* ── 비밀번호 ── */
         #pw-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
@@ -262,6 +262,7 @@
         .links-section-title { font-size: .95rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
         .links-grid { }
         .links-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .links-cols > div { min-width: 0; }
         @media (max-width: 900px) { .links-cols { grid-template-columns: 1fr 1fr; } }
         @media (max-width: 600px) { .links-cols { grid-template-columns: 1fr; } }
         .links-col-head { font-size: .76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
@@ -271,8 +272,8 @@
         .link-info { flex: 1; min-width: 0; }
         .link-title { font-weight: 600; font-size: .88rem; }
         .link-url { font-size: .73rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-        .link-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
-        .link-open { padding: 5px 11px; border-radius: 7px; border: 1px solid var(--border); background: #fff; font-size: .8rem; cursor: pointer; color: var(--primary); font-weight: 600; transition: background .15s; }
+        .link-actions { display: flex; gap: 4px; flex-shrink: 1; align-items: center; flex-wrap: wrap; }
+        .link-open { padding: 5px 11px; border-radius: 7px; border: 1px solid var(--border); background: #fff; font-size: .8rem; cursor: pointer; color: var(--primary); font-weight: 600; transition: background .15s; white-space: nowrap; }
         .link-open:hover { background: #EEF2FF; border-color: var(--primary); }
         .link-del { background: none; border: none; cursor: pointer; color: #CBD5E1; font-size: .85rem; padding: 4px; border-radius: 4px; transition: color .15s; line-height: 1; }
         .link-del:hover { color: var(--red); }
