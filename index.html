@@ -1818,9 +1818,10 @@ function shareKakao() {
         return s;
     }
     const todayStart = new Date(d); todayStart.setHours(0,0,0,0);
+    const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
     const ip = tasks.filter(t => t.status === '작업중'         && !t.isRoutine);
     const ns = tasks.filter(t => t.status === '작업 시작 안함' && !t.isRoutine);
-    const dn = tasks.filter(t => t.status === '완료' && !t.isRoutine && t.doneAt && t.doneAt < todayStart.getTime());
+    const dn = tasks.filter(t => t.status === '완료' && !t.isRoutine && t.doneAt && t.doneAt >= yesterdayStart.getTime() && t.doneAt < todayStart.getTime());
     msg += formatSection('🔶', '작업중', ip) + '\n';
     msg += formatSection('🔴', '미시작', ns) + '\n';
     msg += formatSection('✅', '전일 완료', dn);
